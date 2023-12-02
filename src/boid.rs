@@ -122,23 +122,20 @@ fn coherence(
 
 fn separation(
     settings: Res<BoidSettings>,
-    mut boids: Query<(Entity, &Transform, &mut Velocity), With<Boid>>,
-    other: Query<(Entity, &Transform), With<Boid>>,
+    mut boids: Query<(&Transform, &Nearby, &mut Velocity), With<Boid>>,
+    other: Query<&Transform, With<Boid>>,
 ) {
-    for (this_entity, this_trans, mut this_vel) in boids.iter_mut() {
+    for (this_trans, nearby, mut this_vel) in
+        boids.iter_mut().filter(|(_, nearby, _)| nearby.len() > 0)
+    {
         let this_pos = this_trans.translation.xy();
         let mut c = Vec2::ZERO;
-        for (other, other_trans) in other.iter() {
-            if this_entity == other {
-                continue;
-            }
-
-            let other_pos = other_trans.translation.xy();
-            let diff = other_pos - this_pos;
-            if (other_pos - this_pos).length() > settings.visual_range {
-                continue;
-            }
-
+        for nearby_pos in nearby
+            .iter()
+            .filter_map(|entity| other.get(*entity).ok())
+            .map(|other_trans| other_trans.translation.xy())
+        {
+            let diff = nearby_pos - this_pos;
             c = c - diff * 0.1 * settings.separation;
         }
         this_vel.0 += c;
