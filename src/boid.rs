@@ -12,7 +12,7 @@ impl Plugin for BoidPlugin {
         app.register_type::<Velocity>();
         app.insert_resource(BoidSettings {
             coherence: 0.1,
-            separation: 0.1,
+            separation: 0.0,
             alignment: 0.00,
             visual_range: 100.0,
             max_velocity: 200.0,
@@ -53,6 +53,9 @@ struct Boid;
 struct Velocity(pub Vec2);
 
 #[derive(Component, Default, Deref, DerefMut)]
+struct NextVelocity(pub Vec2);
+
+#[derive(Component, Default, Deref, DerefMut)]
 struct Nearby(pub Vec<Entity>);
 
 fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
@@ -65,7 +68,7 @@ fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
         let x = rng.gen::<f32>() * 200. - 100.;
         let y = rng.gen::<f32>() * 200. - 100.;
         entity.insert(Velocity(Vec2 { x, y }));
-
+        entity.insert(NextVelocity::default());
         entity.insert(TransformBundle {
             local: Transform::from_xyz(
                 rng.gen::<f32>() * 100.,
@@ -102,7 +105,7 @@ fn nearby(
 
 fn coherence(
     settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &Nearby, &mut Velocity), With<Boid>>,
+    mut boids: Query<(&Transform, &Nearby, &mut NextVelocity), With<Boid>>,
     other: Query<&Transform, With<Boid>>,
 ) {
     for (this_trans, nearby, mut this_vel) in
@@ -122,7 +125,7 @@ fn coherence(
 
 fn separation(
     settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &Nearby, &mut Velocity), With<Boid>>,
+    mut boids: Query<(&Transform, &Nearby, &mut NextVelocity), With<Boid>>,
     other: Query<&Transform, With<Boid>>,
 ) {
     for (this_trans, nearby, mut this_vel) in
@@ -142,21 +145,29 @@ fn separation(
     }
 }
 
-fn alignment(settings: Res<BoidSettings>, mut boids: Query<&mut Velocity, With<Boid>>) {
-    let count = (boids.iter().count() - 1) as f32;
-    let all_vels: Vec2 = boids.iter().map(|vel| vel.0).sum();
-
-    for mut vel in boids.iter_mut() {
-        let this_vel = vel.0;
-        let d_vel = all_vels - this_vel;
-        let average_vel = d_vel / count;
-        vel.0 += ((average_vel - this_vel) / 8.0) * settings.alignment;
+fn alignment(
+    settings: Res<BoidSettings>,
+    mut boids: Query<(&Transform, &Nearby, &mut NextVelocity), With<Boid>>,
+    other: Query<&Velocity, With<Boid>>,
+) {
+    for (this_trans, nearby, mut this_vel) in
+        boids.iter_mut().filter(|(_, nearby, _)| nearby.len() > 0)
+    {
+        let count = nearby.len();
+        let this_pos = this_trans.translation.xy();
+        let average_vel: Vec2 = nearby
+            .iter()
+            .filter_map(|other_entity| other.get(*other_entity).ok())
+            .map(|other_vel| other_vel.0)
+            .sum::<Vec2>()
+            / count as f32;
+        this_vel.0 += (average_vel - this_pos) * 0.1 * settings.alignment;
     }
 }
 
 fn bounds(
     settings: Res<BoidSettings>,
-    mut boids: Query<(&mut Transform, &mut Velocity), With<Boid>>,
+    mut boids: Query<(&mut Transform, &mut NextVelocity), With<Boid>>,
 ) {
     for (mut boid, mut vel) in boids.iter_mut() {
         let pos = boid.translation.xy();
@@ -181,8 +192,12 @@ fn bounds(
     }
 }
 
-fn update(mut boids: Query<(&mut Transform, &Velocity), With<Boid>>, time: Res<Time>) {
-    for (mut boid, vel) in boids.iter_mut() {
+fn update(
+    mut boids: Query<(&mut Transform, &NextVelocity, &mut Velocity), With<Boid>>,
+    time: Res<Time>,
+) {
+    for (mut boid, next_vel, mut vel) in boids.iter_mut() {
+        vel.0 = next_vel.0;
         boid.translation += vel.extend(0.0) * time.delta_seconds();
     }
 }
