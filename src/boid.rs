@@ -11,6 +11,7 @@ impl Plugin for BoidPlugin {
             coherence: 0.5,
             separation: 0.0,
             alignment: 0.0,
+            visual_range: 100.0,
         });
         app.add_systems(Startup, spawn);
         app.add_systems(
@@ -26,6 +27,7 @@ struct BoidSettings {
     coherence: f32,
     separation: f32,
     alignment: f32,
+    visual_range: f32,
 }
 
 #[derive(Component)]
@@ -106,7 +108,7 @@ fn separation(
             }
 
             let diff = other_transform.translation.xy() - this_transform.translation.xy();
-            if diff.length() < 100. {
+            if diff.length() < settings.visual_range {
                 c = c - diff;
             }
         }
