@@ -12,8 +12,8 @@ impl Plugin for BoidPlugin {
         app.register_type::<Velocity>();
         app.insert_resource(BoidSettings {
             coherence: 0.1,
-            separation: 0.01,
-            alignment: 0.01,
+            separation: 0.00,
+            alignment: 0.00,
             visual_range: 100.0,
             max_velocity: 200.0,
             show_range: true,
@@ -75,18 +75,30 @@ fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
 
 fn coherence(
     settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut Velocity), With<Boid>>,
+    mut boids: Query<(Entity, &Transform, &mut Velocity), With<Boid>>,
+    other: Query<(Entity, &Transform), With<Boid>>,
 ) {
-    let count = (boids.iter().count() - 1) as f32;
-    let all_masses: Vec2 = boids
-        .iter()
-        .map(|(transform, _vel)| transform.translation.xy())
-        .sum();
+    for (this_entity, this_trans, mut this_vel) in boids.iter_mut() {
+        let this_pos = this_trans.translation.xy();
+        let mut count: usize = 0;
+        let mut all_masses = Vec2::ZERO;
+        for (other_entity, other_trans) in other.iter() {
+            if this_entity == other_entity {
+                continue;
+            }
 
-    for (boid, mut vel) in boids.iter_mut() {
-        let pos = boid.translation.xy();
-        let center_of_mass = (all_masses - pos) / count;
-        vel.0 += (center_of_mass - pos) * 0.1 * settings.coherence;
+            let other_pos = other_trans.translation.xy();
+            if (other_pos - this_pos).length() > settings.visual_range {
+                continue;
+            }
+            count += 1;
+            all_masses += other_pos;
+        }
+
+        if count > 0 {
+            let center_of_mass = all_masses / count as f32;
+            this_vel.0 += (center_of_mass - this_pos) * 0.1 * settings.coherence;
+        }
     }
 }
 
