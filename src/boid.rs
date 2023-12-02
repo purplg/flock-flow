@@ -58,11 +58,15 @@ struct NextVelocity(pub Vec2);
 #[derive(Component, Default, Deref, DerefMut)]
 struct Nearby(pub Vec<Entity>);
 
-fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
+fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResMut<RngSource>) {
     let rng = &mut **rng;
     for i in 0..100 {
         let mut entity = commands.spawn_empty();
         entity.insert(Name::new(format!("Boid {}", i)));
+        entity.insert(SpriteBundle {
+            texture: asset_server.load("boid.png"),
+            ..default()
+        });
         entity.insert(Boid);
         entity.insert(Nearby::default());
         let x = rng.gen::<f32>() * 200. - 100.;
@@ -215,7 +219,6 @@ fn gizmo(
                 Color::rgba(1.0, 0.0, 0.0, 0.1),
             );
         }
-        gizmos.circle_2d(transform.translation.xy(), 2.0, Color::RED);
         if settings.show_direction {
             gizmos.line_2d(
                 transform.translation.xy(),
