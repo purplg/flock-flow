@@ -13,7 +13,10 @@ impl Plugin for BoidPlugin {
             alignment: 0.0,
         });
         app.add_systems(Startup, spawn);
-        app.add_systems(Update, (bounds, coherence, separation, alignment, update).chain());
+        app.add_systems(
+            Update,
+            (start, coherence, separation, alignment, update).chain(),
+        );
         app.add_systems(Update, gizmo);
     }
 }
@@ -53,7 +56,7 @@ fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
     }
 }
 
-fn bounds(mut boids: Query<(&Transform, &mut Velocity), With<Boid>>) {
+fn start(mut boids: Query<(&Transform, &mut Velocity), With<Boid>>) {
     for (boid, mut vel) in boids.iter_mut() {
         let pos = boid.translation.xy();
         if pos.x < -400.0 {
@@ -91,9 +94,24 @@ fn coherence(
 
 fn separation(
     settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut Velocity), With<Boid>>,
+    mut boids: Query<(Entity, &Transform, &mut Velocity), With<Boid>>,
+    other_boids: Query<(Entity, &Transform), With<Boid>>,
+    time: Res<Time>,
 ) {
-    for (boid, mut vel) in boids.iter_mut() {}
+    for (this, this_transform, mut vel) in boids.iter_mut() {
+        let mut c = Vec2::ZERO;
+        for (other, other_transform) in other_boids.iter() {
+            if this == other {
+                continue;
+            }
+
+            let diff = other_transform.translation.xy() - this_transform.translation.xy();
+            if diff.length() < 100. {
+                c = c - diff;
+            }
+        }
+        vel.0 += c * 0.1 * time.delta_seconds();
+    }
 }
 
 fn alignment(
@@ -105,7 +123,7 @@ fn alignment(
 
 fn update(settings: Res<BoidSettings>, mut boids: Query<(&mut Transform, &Velocity), With<Boid>>) {
     for (mut boid, vel) in boids.iter_mut() {
-        boid.translation += vel.extend(0.0).xyz();
+        boid.translation += vel.extend(0.0);
     }
 }
 
