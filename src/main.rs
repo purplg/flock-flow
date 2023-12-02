@@ -2,8 +2,7 @@ mod boid;
 mod camera;
 mod rng;
 
-use bevy::{log::LogPlugin, prelude::*};
-use bevy_editor_pls::{EditorPlugin, EditorWindowPlacement};
+use bevy::{app::AppExit, log::LogPlugin, prelude::*};
 
 struct CorePlugin;
 
@@ -12,6 +11,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(rng::RngPlugin);
         app.add_plugins(camera::CameraPlugin);
         app.add_plugins(boid::BoidPlugin);
+        app.add_systems(Update, quit);
     }
 }
 
@@ -39,4 +39,10 @@ fn main() {
     //     }),
     // });
     app.run();
+}
+
+fn quit(keys: Res<Input<KeyCode>>, mut app_exit_events: ResMut<Events<AppExit>>) {
+    if keys.just_pressed(KeyCode::Escape) {
+        app_exit_events.send(AppExit);
+    }
 }
