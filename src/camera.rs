@@ -16,5 +16,5 @@ fn spawn(mut commands: Commands) {
 }
 
 fn gizmo(mut gizmos: Gizmos, cameras: Query<&Camera2d>) {
-    gizmos.rect_2d(Vec2::ZERO, 0.0, Vec2::new(800.0, 600.0), Color::BLUE);
+    gizmos.rect_2d(Vec2::ZERO, 0.0, Vec2::new(1000.0, 600.0), Color::BLUE);
 }

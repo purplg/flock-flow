@@ -59,10 +59,10 @@ fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
 fn start(mut boids: Query<(&Transform, &mut Velocity), With<Boid>>) {
     for (boid, mut vel) in boids.iter_mut() {
         let pos = boid.translation.xy();
-        if pos.x < -400.0 {
+        if pos.x < -500.0 {
             vel.x *= -1.0;
         }
-        if pos.x > 400.0 {
+        if pos.x > 500.0 {
             vel.x *= -1.0;
         }
         if pos.y < -300.0 {
@@ -116,9 +116,18 @@ fn separation(
 
 fn alignment(
     settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut Velocity), With<Boid>>,
+    mut boids: Query<&mut Velocity, With<Boid>>,
+    time: Res<Time>,
 ) {
-    for (boid, mut vel) in boids.iter_mut() {}
+    let count = (boids.iter().count() - 1) as f32;
+    let all_vels: Vec2 = boids.iter().map(|vel| vel.0).sum();
+
+    for mut vel in boids.iter_mut() {
+        let this_vel = vel.0;
+        let d_vel = all_vels - this_vel;
+        let average_vel = d_vel / count;
+        vel.0 += (average_vel - this_vel) / 8.0 * time.delta_seconds();
+    }
 }
 
 fn update(settings: Res<BoidSettings>, mut boids: Query<(&mut Transform, &Velocity), With<Boid>>) {
