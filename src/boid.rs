@@ -12,7 +12,7 @@ impl Plugin for BoidPlugin {
         app.register_type::<Velocity>();
         app.insert_resource(BoidSettings {
             coherence: 0.1,
-            separation: 0.00,
+            separation: 0.1,
             alignment: 0.00,
             visual_range: 100.0,
             max_velocity: 200.0,
@@ -107,19 +107,23 @@ fn separation(
     mut boids: Query<(Entity, &Transform, &mut Velocity), With<Boid>>,
     other_boids: Query<(Entity, &Transform), With<Boid>>,
 ) {
-    for (this, this_transform, mut vel) in boids.iter_mut() {
+    for (this_entity, this_trans, mut this_vel) in boids.iter_mut() {
+        let this_pos = this_trans.translation.xy();
         let mut c = Vec2::ZERO;
-        for (other, other_transform) in other_boids.iter() {
-            if this == other {
+        for (other, other_trans) in other_boids.iter() {
+            if this_entity == other {
                 continue;
             }
 
-            let diff = other_transform.translation.xy() - this_transform.translation.xy();
-            if diff.length() < settings.visual_range {
-                c = c - diff * settings.separation;
+            let other_pos = other_trans.translation.xy();
+            let diff = other_pos - this_pos;
+            if (other_pos - this_pos).length() > settings.visual_range {
+                continue;
             }
+
+            c = c - diff * 0.1 * settings.separation;
         }
-        vel.0 += c;
+        this_vel.0 += c;
     }
 }
 
