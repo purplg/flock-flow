@@ -23,7 +23,7 @@ impl Plugin for BoidPlugin {
         app.add_systems(Startup, spawn);
         app.add_systems(
             Update,
-            (coherence, separation, alignment, bounds, update).chain(),
+            (nearby, coherence, separation, alignment, bounds, update).chain(),
         );
         app.add_systems(Update, gizmo);
     }
@@ -52,12 +52,16 @@ struct Boid;
 #[derive(Component, Deref, DerefMut, Reflect)]
 struct Velocity(pub Vec2);
 
+#[derive(Component, Default, Deref, DerefMut)]
+struct Nearby(pub Vec<Entity>);
+
 fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
     let rng = &mut **rng;
     for i in 0..100 {
         let mut entity = commands.spawn_empty();
         entity.insert(Name::new(format!("Boid {}", i)));
         entity.insert(Boid);
+        entity.insert(Nearby::default());
         let x = rng.gen::<f32>() * 200. - 100.;
         let y = rng.gen::<f32>() * 200. - 100.;
         entity.insert(Velocity(Vec2 { x, y }));
@@ -73,15 +77,14 @@ fn spawn(mut commands: Commands, mut rng: ResMut<RngSource>) {
     }
 }
 
-fn coherence(
+fn nearby(
     settings: Res<BoidSettings>,
-    mut boids: Query<(Entity, &Transform, &mut Velocity), With<Boid>>,
+    mut boids: Query<(Entity, &Transform, &mut Nearby), With<Boid>>,
     other: Query<(Entity, &Transform), With<Boid>>,
 ) {
-    for (this_entity, this_trans, mut this_vel) in boids.iter_mut() {
+    for (this_entity, this_trans, mut nearby) in boids.iter_mut() {
+        nearby.0.clear();
         let this_pos = this_trans.translation.xy();
-        let mut count: usize = 0;
-        let mut all_masses = Vec2::ZERO;
         for (other_entity, other_trans) in other.iter() {
             if this_entity == other_entity {
                 continue;
@@ -91,26 +94,41 @@ fn coherence(
             if (other_pos - this_pos).length() > settings.visual_range {
                 continue;
             }
-            count += 1;
-            all_masses += other_pos;
-        }
 
-        if count > 0 {
-            let center_of_mass = all_masses / count as f32;
-            this_vel.0 += (center_of_mass - this_pos) * 0.1 * settings.coherence;
+            nearby.0.push(other_entity);
         }
+    }
+}
+
+fn coherence(
+    settings: Res<BoidSettings>,
+    mut boids: Query<(&Transform, &Nearby, &mut Velocity), With<Boid>>,
+    other: Query<&Transform, With<Boid>>,
+) {
+    for (this_trans, nearby, mut this_vel) in
+        boids.iter_mut().filter(|(_, nearby, _)| nearby.len() > 0)
+    {
+        let count = nearby.len();
+        let this_pos = this_trans.translation.xy();
+        let center_of_mass: Vec2 = nearby
+            .iter()
+            .filter_map(|other_entity| other.get(*other_entity).ok())
+            .map(|other_trans| other_trans.translation.xy())
+            .sum::<Vec2>()
+            / count as f32;
+        this_vel.0 += (center_of_mass - this_pos) * 0.1 * settings.coherence;
     }
 }
 
 fn separation(
     settings: Res<BoidSettings>,
     mut boids: Query<(Entity, &Transform, &mut Velocity), With<Boid>>,
-    other_boids: Query<(Entity, &Transform), With<Boid>>,
+    other: Query<(Entity, &Transform), With<Boid>>,
 ) {
     for (this_entity, this_trans, mut this_vel) in boids.iter_mut() {
         let this_pos = this_trans.translation.xy();
         let mut c = Vec2::ZERO;
-        for (other, other_trans) in other_boids.iter() {
+        for (other, other_trans) in other.iter() {
             if this_entity == other {
                 continue;
             }
