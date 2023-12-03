@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
+use bevy_spatial::{kdtree::KDTree2, AutomaticUpdate, SpatialAccess, SpatialStructure};
 use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
@@ -9,6 +10,7 @@ pub struct BoidPlugin;
 
 impl Plugin for BoidPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(AutomaticUpdate::<Boid>::new().with_spatial_ds(SpatialStructure::KDTree2));
         app.register_type::<BoidSettings>();
         app.register_type::<Velocity>();
         app.insert_resource(BoidSettings {
@@ -81,7 +83,7 @@ fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
     events.send_batch(
         (&mut **rng)
             .sample_iter(Standard)
-            .take(100 * 2)
+            .take(1000 * 2)
             .tuples()
             .map(|(x, y): (f32, f32)| {
                 GameEvent::SpawnBoid(Vec2 {
@@ -155,21 +157,21 @@ fn spawn(
 
 fn nearby(
     settings: Res<BoidSettings>,
+    quadtree: Res<KDTree2<Boid>>,
     mut boids: Query<(Entity, &Transform, &mut Nearby), With<Boid>>,
-    other: Query<(Entity, &Transform), With<Boid>>,
 ) {
     for (this_entity, this_trans, mut nearby) in boids.iter_mut() {
         nearby.0.clear();
         let this_pos = this_trans.translation.xy();
-        for (other_entity, other_trans) in other.iter() {
-            if this_entity == other_entity {
-                continue;
-            }
 
-            let other_pos = other_trans.translation.xy();
-            if (other_pos - this_pos).length_squared()
-                > settings.visual_range * settings.visual_range
-            {
+        for (_other_pos, other_entity) in quadtree
+            .within_distance(this_pos, settings.visual_range)
+            .into_iter()
+        {
+            let Some(other_entity) = other_entity else {
+                continue;
+            };
+            if this_entity == other_entity {
                 continue;
             }
 

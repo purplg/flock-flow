@@ -4,7 +4,12 @@ mod input;
 mod node;
 mod rng;
 
-use bevy::{app::AppExit, log::LogPlugin, prelude::*};
+use bevy::{
+    app::AppExit,
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    log::LogPlugin,
+    prelude::*,
+};
 
 struct CorePlugin;
 
@@ -54,20 +59,13 @@ fn health(
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins(
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Bevy App".to_string(),
-                    ..default()
-                }),
-                ..default()
-            })
-            .set(LogPlugin {
-                filter: "error,procedural=debug".into(),
-                ..default()
-            }),
-    );
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Bevy App".to_string(),
+            ..default()
+        }),
+        ..default()
+    }));
     app.add_plugins(CorePlugin);
     // app.add_plugins(EditorPlugin {
     //     window: EditorWindowPlacement::New(Window {
@@ -75,6 +73,9 @@ fn main() {
     //         ..default()
     //     }),
     // });
+
+    app.add_plugins(LogDiagnosticsPlugin::default());
+    app.add_plugins(FrameTimeDiagnosticsPlugin);
     app.run();
 }
 
