@@ -26,7 +26,11 @@ impl Plugin for BoidPlugin {
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
         app.add_systems(Startup, spawn);
-        app.add_systems(Update, (nearby, update, step).chain());
+        app.add_systems(PreUpdate, nearby);
+        app.add_systems(Update, coherence);
+        app.add_systems(Update, separation);
+        app.add_systems(Update, alignment);
+        app.add_systems(PostUpdate, (bounds, step).chain());
         app.add_systems(Update, gizmo);
     }
 }
@@ -119,97 +123,96 @@ fn nearby(
 }
 
 fn coherence(
-    settings: &BoidSettings,
-    transform: &Transform,
-    nearby: &Nearby,
-    boids: &Query<(&Transform, &Velocity), With<Boid>>,
-) -> Vec2 {
-    let count = nearby.len();
-    if count == 0 {
-        return Vec2::ZERO;
-    }
-
-    let this_pos = transform.translation.xy();
-    let center_of_mass: Vec2 = nearby
-        .iter()
-        .filter_map(|other_entity| boids.get(*other_entity).ok())
-        .map(|(other_trans, _)| other_trans.translation.xy())
-        .sum::<Vec2>()
-        / count as f32;
-    (center_of_mass - this_pos) * settings.coherence
-}
-
-fn separation(
-    settings: &BoidSettings,
-    transform: &Transform,
-    nearby: &Nearby,
-    boids: &Query<(&Transform, &Velocity), With<Boid>>,
-) -> Vec2 {
-    let this_pos = transform.translation.xy();
-    let mut c = Vec2::ZERO;
-    for other_pos in nearby
-        .iter()
-        .filter_map(|entity| boids.get(*entity).ok())
-        .map(|(other_trans, _)| other_trans.translation.xy())
-        .filter(|other_pos| (*other_pos - this_pos).length() < settings.avoid_range)
-    {
-        c += this_pos - other_pos;
-    }
-    c * settings.separation
-}
-
-fn alignment(
-    settings: &BoidSettings,
-    transform: &Transform,
-    nearby: &Nearby,
-    boids: &Query<(&Transform, &Velocity), With<Boid>>,
-) -> Vec2 {
-    let count = nearby.len();
-    if count == 0 {
-        return Vec2::ZERO;
-    }
-
-    let this_pos = transform.translation.xy();
-    let average_vel: Vec2 = nearby
-        .iter()
-        .filter_map(|other_entity| boids.get(*other_entity).ok())
-        .map(|(_, other_vel)| other_vel.0)
-        .sum::<Vec2>()
-        / count as f32;
-
-    (average_vel - this_pos) * settings.alignment
-}
-
-fn bounds(transform: &Transform) -> Vec2 {
-    let mut force = Vec2::ZERO;
-    const CENTER_FORCE: f32 = 100.0;
-    let pos = transform.translation.xy();
-    if pos.x < -500.0 {
-        force.x += CENTER_FORCE;
-    } else if pos.x > 500.0 {
-        force.x -= CENTER_FORCE;
-    }
-
-    if pos.y < -300.0 {
-        force.y += CENTER_FORCE;
-    } else if pos.y > 300.0 {
-        force.y -= CENTER_FORCE;
-    }
-    force
-}
-
-fn update(
     settings: Res<BoidSettings>,
     mut boids: Query<(&Transform, &mut NextVelocity, &Nearby), With<Boid>>,
     other: Query<(&Transform, &Velocity), With<Boid>>,
 ) {
-    for (transform, mut next_vel, nearby) in boids.iter_mut() {
-        next_vel.0 = next_vel.0
-            + coherence(&settings, &transform, nearby, &other)
-            + separation(&settings, &transform, nearby, &other)
-            + alignment(&settings, &transform, nearby, &other)
-            + bounds(&transform);
-        next_vel.0 = next_vel.0.clamp_length_max(settings.max_velocity);
+    for (transform, mut vel, nearby) in boids.iter_mut() {
+        let count = nearby.len();
+        if count == 0 {
+            continue;
+        }
+
+        let this_pos = transform.translation.xy();
+        let center_of_mass: Vec2 = nearby
+            .iter()
+            .filter_map(|other_entity| other.get(*other_entity).ok())
+            .map(|(other_trans, _)| other_trans.translation.xy())
+            .sum::<Vec2>()
+            / count as f32;
+        vel.0 += (center_of_mass - this_pos) * settings.coherence;
+    }
+}
+
+fn separation(
+    settings: Res<BoidSettings>,
+    mut boids: Query<(&Transform, &mut NextVelocity, &Nearby), With<Boid>>,
+    other: Query<(&Transform, &Velocity), With<Boid>>,
+) {
+    for (transform, mut vel, nearby) in boids.iter_mut() {
+        let count = nearby.len();
+        if count == 0 {
+            continue;
+        }
+
+        let this_pos = transform.translation.xy();
+        let mut c = Vec2::ZERO;
+        for other_pos in nearby
+            .iter()
+            .filter_map(|entity| other.get(*entity).ok())
+            .map(|(other_trans, _)| other_trans.translation.xy())
+            .filter(|other_pos| (*other_pos - this_pos).length() < settings.avoid_range)
+        {
+            c += this_pos - other_pos;
+        }
+        vel.0 += c * settings.separation;
+    }
+}
+
+fn alignment(
+    settings: Res<BoidSettings>,
+    mut boids: Query<(&Transform, &mut NextVelocity, &Nearby), With<Boid>>,
+    other: Query<(&Transform, &Velocity), With<Boid>>,
+) {
+    for (transform, mut vel, nearby) in boids.iter_mut() {
+        let count = nearby.len();
+        if count == 0 {
+            continue;
+        }
+
+        let this_pos = transform.translation.xy();
+        let average_vel: Vec2 = nearby
+            .iter()
+            .filter_map(|other_entity| other.get(*other_entity).ok())
+            .map(|(_, other_vel)| other_vel.0)
+            .sum::<Vec2>()
+            / count as f32;
+
+        vel.0 += (average_vel - this_pos) * settings.alignment;
+    }
+}
+
+fn bounds(
+    settings: Res<BoidSettings>,
+    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+) {
+    for (transform, mut vel) in boids.iter_mut() {
+        let mut force = Vec2::ZERO;
+        const CENTER_FORCE: f32 = 100.0;
+        let pos = transform.translation.xy();
+        if pos.x < -500.0 {
+            force.x += CENTER_FORCE;
+        } else if pos.x > 500.0 {
+            force.x -= CENTER_FORCE;
+        }
+
+        if pos.y < -300.0 {
+            force.y += CENTER_FORCE;
+        } else if pos.y > 300.0 {
+            force.y -= CENTER_FORCE;
+        }
+        vel.0 += force;
+        vel.0 = vel.0.clamp_length_max(settings.max_velocity);
     }
 }
 
