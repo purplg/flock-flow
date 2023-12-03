@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
-use rand::Rng;
+use itertools::Itertools;
+use rand::{distributions::Standard, Rng};
 
-use crate::{input::InputEvent, rng::RngSource};
+use crate::{input::InputEvent, rng::RngSource, GameEvent};
 
 pub struct BoidPlugin;
 
@@ -25,8 +26,10 @@ impl Plugin for BoidPlugin {
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
+        app.add_systems(Startup, startup);
         app.add_systems(PreUpdate, nearby);
         app.add_systems(Update, input);
+        app.add_systems(Update, spawn);
         app.add_systems(Update, coherence);
         app.add_systems(Update, separation);
         app.add_systems(Update, alignment);
@@ -72,16 +75,58 @@ struct NextVelocity(pub Vec2);
 #[derive(Component, Default, Deref, DerefMut)]
 struct Nearby(pub Vec<Entity>);
 
+fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
+    events.send_batch(
+        (&mut **rng)
+            .sample_iter(Standard)
+            .take(100 * 2)
+            .tuples()
+            .map(|(x, y): (f32, f32)| {
+                GameEvent::SpawnBoid(Vec2 {
+                    x: x * 1000. - 500.,
+                    y: y * 600. - 300.,
+                })
+            }),
+    )
+}
+
 fn input(
+    mut rng: ResMut<RngSource>,
+    mut input_events: EventReader<InputEvent>,
+    mut game_events: EventWriter<GameEvent>,
+    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+) {
+    for event in input_events.read() {
+        match event {
+            InputEvent::SpawnBoid => {
+                let rng = &mut **rng;
+                game_events.send(GameEvent::SpawnBoid(Vec2 {
+                    x: rng.gen::<f32>() * 1000. - 500.,
+                    y: rng.gen::<f32>() * 600. - 300.,
+                }));
+            }
+            InputEvent::Schwack(schwak_pos) => {
+                for (pos, mut vel) in boids
+                    .iter_mut()
+                    .map(|(trans, vel)| (trans.translation.xy(), vel))
+                    .filter(|(pos, _)| (*pos - *schwak_pos).length_squared() < 100. * 100.)
+                {
+                    vel.0 += (pos - *schwak_pos) * 10.;
+                }
+            }
+        }
+    }
+}
+
+fn spawn(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut rng: ResMut<RngSource>,
-    mut events: EventReader<InputEvent>,
-    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+    mut events: EventReader<GameEvent>,
 ) {
     for event in events.read() {
         match event {
-            InputEvent::SpawnBoid => {
+            GameEvent::SpawnBoid(pos) => {
                 let rng = &mut **rng;
                 let mut entity = commands.spawn_empty();
                 entity.insert(Name::new("Boid"));
@@ -97,22 +142,9 @@ fn input(
                 entity.insert(Velocity(vel));
                 entity.insert(NextVelocity(vel));
                 entity.insert(TransformBundle {
-                    local: Transform::from_xyz(
-                        rng.gen::<f32>() * 1000. - 500.,
-                        rng.gen::<f32>() * 600. - 300.,
-                        0.0,
-                    ),
+                    local: Transform::from_xyz(pos.x, pos.y, 0.0),
                     ..default()
                 });
-            }
-            InputEvent::Schwack(schwak_pos) => {
-                for (pos, mut vel) in boids
-                    .iter_mut()
-                    .map(|(trans, vel)| (trans.translation.xy(), vel))
-                    .filter(|(pos, _)| (*pos - *schwak_pos).length_squared() < 100. * 100.)
-                {
-                    vel.0 += (pos - *schwak_pos) * 10.;
-                }
             }
         }
     }
