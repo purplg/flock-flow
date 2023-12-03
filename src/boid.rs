@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 use rand::Rng;
 
-use crate::rng::RngSource;
+use crate::{input::InputEvent, rng::RngSource};
 
 pub struct BoidPlugin;
 
@@ -30,6 +30,7 @@ impl Plugin for BoidPlugin {
         app.add_systems(Update, coherence);
         app.add_systems(Update, separation);
         app.add_systems(Update, alignment);
+        app.add_systems(Update, schwack);
         app.add_systems(PostUpdate, (bounds, step).chain());
         app.add_systems(Update, gizmo);
     }
@@ -113,7 +114,9 @@ fn nearby(
             }
 
             let other_pos = other_trans.translation.xy();
-            if (other_pos - this_pos).length() > settings.visual_range {
+            if (other_pos - this_pos).length_squared()
+                > settings.visual_range * settings.visual_range
+            {
                 continue;
             }
 
@@ -161,7 +164,10 @@ fn separation(
             .iter()
             .filter_map(|entity| other.get(*entity).ok())
             .map(|(other_trans, _)| other_trans.translation.xy())
-            .filter(|other_pos| (*other_pos - this_pos).length() < settings.avoid_range)
+            .filter(|other_pos| {
+                (*other_pos - this_pos).length_squared()
+                    < settings.avoid_range * settings.avoid_range
+            })
         {
             c += this_pos - other_pos;
         }
@@ -189,6 +195,25 @@ fn alignment(
             / count as f32;
 
         vel.0 += (average_vel - this_pos) * settings.alignment;
+    }
+}
+
+fn schwack(
+    mut input: EventReader<InputEvent>,
+    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+) {
+    let Some(schwak_pos) = input.read().find_map(|event| match event {
+        InputEvent::Schwack(pos) => Some(pos),
+    }) else {
+        return;
+    };
+
+    for (pos, mut vel) in boids
+        .iter_mut()
+        .map(|(trans, vel)| (trans.translation.xy(), vel))
+        .filter(|(pos, _)| (*pos - *schwak_pos).length_squared() < 100. * 100.)
+    {
+        vel.0 += (pos - *schwak_pos) * 10.;
     }
 }
 
