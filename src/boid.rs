@@ -13,6 +13,9 @@ impl Plugin for BoidPlugin {
         app.add_plugins(AutomaticUpdate::<Boid>::new().with_spatial_ds(SpatialStructure::KDTree2));
         app.register_type::<BoidSettings>();
         app.register_type::<Velocity>();
+        app.register_type::<Coherence>();
+        app.register_type::<Separation>();
+        app.register_type::<Alignment>();
         app.insert_resource(BoidSettings {
             coherence: 0.005,
             separation: 0.05,
