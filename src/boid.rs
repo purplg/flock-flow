@@ -149,7 +149,7 @@ fn spawn(
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Reflect, Default)]
 struct Coherence {
     effect: Vec2,
 }
@@ -174,7 +174,7 @@ fn coherence(
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Reflect, Default)]
 struct Separation {
     effect: Vec2,
 }
@@ -204,7 +204,7 @@ fn separation(
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Reflect, Default)]
 struct Alignment {
     effect: Vec2,
 }
@@ -229,12 +229,11 @@ fn alignment(
             count += 1;
         }
 
-        if count == 0 {
-            alignment.effect = Vec2::ZERO;
-            return;
-        };
-
-        alignment.effect = (velocities / count as f32) * settings.alignment;
+        alignment.effect = if count > 0 {
+            (velocities / count as f32) * settings.alignment
+        } else {
+            Vec2::ZERO
+        }
     }
 }
 
