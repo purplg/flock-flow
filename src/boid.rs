@@ -3,7 +3,7 @@ use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorO
 use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
-use crate::{input::InputEvent, rng::RngSource, GameEvent};
+use crate::{input::InputEvent, rng::RngSource, GameEvent, Health};
 
 pub struct BoidPlugin;
 
@@ -33,6 +33,7 @@ impl Plugin for BoidPlugin {
         app.add_systems(Update, coherence);
         app.add_systems(Update, separation);
         app.add_systems(Update, alignment);
+        app.add_systems(Update, eat);
         app.add_systems(PostUpdate, (bounds, step).chain());
         app.add_systems(Update, gizmo);
     }
@@ -146,6 +147,7 @@ fn spawn(
                     ..default()
                 });
             }
+            GameEvent::HurtNode(_, _) => {}
         }
     }
 }
@@ -277,6 +279,20 @@ fn step(
     for (mut transform, next_vel, mut vel) in boids.iter_mut() {
         vel.0 = next_vel.0;
         transform.translation += vel.extend(0.0) * time.delta_seconds();
+    }
+}
+
+fn eat(
+    boids: Query<&Transform, With<Boid>>,
+    foods: Query<(Entity, &Transform), With<Health>>,
+    mut events: EventWriter<GameEvent>,
+) {
+    for boid in boids.iter() {
+        for (entity, node) in foods.iter() {
+            if boid.translation.distance_squared(node.translation) < 10.0 * 10.0 {
+                events.send(GameEvent::HurtNode(entity, 10))
+            }
+        }
     }
 }
 

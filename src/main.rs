@@ -1,6 +1,7 @@
 mod boid;
 mod camera;
 mod input;
+mod node;
 mod rng;
 
 use bevy::{app::AppExit, log::LogPlugin, prelude::*};
@@ -16,12 +17,39 @@ impl Plugin for CorePlugin {
         app.add_plugins(boid::BoidPlugin);
         app.add_plugins(node::NodePlugin);
         app.add_systems(Update, quit);
+        app.add_systems(Update, health);
     }
 }
 
 #[derive(Debug, Event)]
 pub enum GameEvent {
     SpawnBoid(Vec2),
+    HurtNode(Entity, u32),
+}
+
+#[derive(Component)]
+pub struct Health(pub u32);
+
+fn health(
+    mut commands: Commands,
+    mut events: EventReader<GameEvent>,
+    mut health: Query<&mut Health>,
+) {
+    for event in events.read() {
+        match event {
+            GameEvent::HurtNode(entity, amount) => {
+                let Ok(mut health) = health.get_mut(*entity) else {
+                    continue;
+                };
+
+                match health.0.checked_sub(*amount) {
+                    Some(remaining) => health.0 = remaining,
+                    None => commands.entity(*entity).despawn(),
+                }
+            }
+            GameEvent::SpawnBoid(_) => {}
+        }
+    }
 }
 
 fn main() {
