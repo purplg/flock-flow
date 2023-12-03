@@ -29,15 +29,11 @@ impl Plugin for BoidPlugin {
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
         app.add_systems(Startup, startup);
-        app.add_systems(PreUpdate, nearby);
         app.add_systems(Update, input);
         app.add_systems(Update, spawn);
-        app.add_systems(Update, coherence);
-        app.add_systems(Update, separation);
-        app.add_systems(Update, alignment);
         app.add_systems(Update, hit);
         app.add_systems(Update, cooldown);
-        app.add_systems(PostUpdate, (bounds, step).chain());
+        app.add_systems(Update, (update, step).chain());
         app.add_systems(Update, gizmo);
     }
 }
@@ -75,9 +71,6 @@ struct Velocity(pub Vec2);
 
 #[derive(Component, Default, Deref, DerefMut)]
 struct NextVelocity(pub Vec2);
-
-#[derive(Component, Default, Deref, DerefMut)]
-struct Nearby(pub Vec<Entity>);
 
 fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
     events.send_batch(
@@ -139,7 +132,6 @@ fn spawn(
                     ..default()
                 });
                 entity.insert(Boid);
-                entity.insert(Nearby::default());
                 let x = rng.gen::<f32>() * 200. - 100.;
                 let y = rng.gen::<f32>() * 200. - 100.;
                 let vel = Vec2 { x, y } * 20.;
@@ -155,123 +147,105 @@ fn spawn(
     }
 }
 
-fn nearby(
-    settings: Res<BoidSettings>,
-    quadtree: Res<KDTree2<Boid>>,
-    mut boids: Query<(Entity, &Transform, &mut Nearby), With<Boid>>,
-) {
-    for (this_entity, this_trans, mut nearby) in boids.iter_mut() {
-        nearby.0.clear();
-        let this_pos = this_trans.translation.xy();
-
-        for (_other_pos, other_entity) in quadtree
-            .within_distance(this_pos, settings.visual_range)
-            .into_iter()
-        {
-            let Some(other_entity) = other_entity else {
-                continue;
-            };
-            if this_entity == other_entity {
-                continue;
-            }
-
-            nearby.0.push(other_entity);
-        }
-    }
-}
-
 fn coherence(
-    settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut NextVelocity, &Nearby), With<Boid>>,
-    other: Query<(&Transform, &Velocity), With<Boid>>,
+    settings: &BoidSettings,
+    transform: &Transform,
+    vel: &mut NextVelocity,
+    nearby: &Vec<(&Transform, &Velocity)>,
 ) {
-    for (transform, mut vel, nearby) in boids.iter_mut() {
-        let count = nearby.len();
-        if count == 0 {
-            continue;
-        }
-
-        let this_pos = transform.translation.xy();
-        let center_of_mass: Vec2 = nearby
-            .iter()
-            .filter_map(|other_entity| other.get(*other_entity).ok())
-            .map(|(other_trans, _)| other_trans.translation.xy())
-            .sum::<Vec2>()
-            / count as f32;
-        vel.0 += (center_of_mass - this_pos) * settings.coherence;
+    let this_pos = transform.translation.xy();
+    let mut masses = Vec2::ZERO;
+    let mut count = 0;
+    for nearby in nearby
+        .iter()
+        .map(|(other_trans, _)| other_trans.translation.xy())
+    {
+        masses += nearby;
+        count += 1;
     }
+
+    if count == 0 {
+        return;
+    };
+
+    vel.0 += ((masses / count as f32) - this_pos) * settings.coherence;
 }
 
 fn separation(
-    settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut NextVelocity, &Nearby), With<Boid>>,
-    other: Query<(&Transform, &Velocity), With<Boid>>,
+    settings: &BoidSettings,
+    transform: &Transform,
+    vel: &mut NextVelocity,
+    nearby: &Vec<(&Transform, &Velocity)>,
 ) {
-    for (transform, mut vel, nearby) in boids.iter_mut() {
-        let count = nearby.len();
-        if count == 0 {
-            continue;
-        }
-
-        let this_pos = transform.translation.xy();
-        let mut c = Vec2::ZERO;
-        for other_pos in nearby
-            .iter()
-            .filter_map(|entity| other.get(*entity).ok())
-            .map(|(other_trans, _)| other_trans.translation.xy())
-            .filter(|other_pos| {
-                (*other_pos - this_pos).length_squared()
-                    < settings.avoid_range * settings.avoid_range
-            })
-        {
-            c += this_pos - other_pos;
-        }
-        vel.0 += c * settings.separation;
+    let this_pos = transform.translation.xy();
+    let mut c = Vec2::ZERO;
+    for other_pos in nearby
+        .into_iter()
+        .map(|(other_trans, _)| other_trans.translation.xy())
+        .filter(|other_pos| {
+            (*other_pos - this_pos).length_squared() < settings.avoid_range * settings.avoid_range
+        })
+    {
+        c += this_pos - other_pos;
     }
+    vel.0 += c * settings.separation;
 }
 
 fn alignment(
-    settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut NextVelocity, &Nearby), With<Boid>>,
-    other: Query<(&Transform, &Velocity), With<Boid>>,
+    settings: &BoidSettings,
+    vel: &mut NextVelocity,
+    nearby: &Vec<(&Transform, &Velocity)>,
 ) {
-    for (transform, mut vel, nearby) in boids.iter_mut() {
-        let count = nearby.len();
-        if count == 0 {
-            continue;
-        }
-
-        let this_pos = transform.translation.xy();
-        let average_vel: Vec2 = nearby
-            .iter()
-            .filter_map(|other_entity| other.get(*other_entity).ok())
-            .map(|(_, other_vel)| other_vel.0)
-            .sum::<Vec2>()
-            / count as f32;
-
-        vel.0 += (average_vel - this_pos) * settings.alignment;
+    let mut velocities = Vec2::ZERO;
+    let mut count = 0;
+    for nearby in nearby.into_iter().map(|(_, other_vel)| other_vel.0) {
+        velocities += nearby;
+        count += 1;
     }
+
+    if count == 0 {
+        return;
+    };
+
+    vel.0 += (velocities / count as f32) * settings.alignment;
 }
 
-fn bounds(
-    settings: Res<BoidSettings>,
-    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
-) {
-    for (transform, mut vel) in boids.iter_mut() {
-        const CENTER_FORCE: f32 = 100.0;
-        let pos = transform.translation.xy();
-        if pos.x < -500.0 {
-            vel.0.x += CENTER_FORCE;
-        } else if pos.x > 500.0 {
-            vel.0.x -= CENTER_FORCE;
-        }
+fn bounds(settings: &BoidSettings, transform: &Transform, vel: &mut NextVelocity) {
+    const CENTER_FORCE: f32 = 100.0;
+    let pos = transform.translation.xy();
+    if pos.x < -500.0 {
+        vel.0.x += CENTER_FORCE;
+    } else if pos.x > 500.0 {
+        vel.0.x -= CENTER_FORCE;
+    }
 
-        if pos.y < -300.0 {
-            vel.0.y += CENTER_FORCE;
-        } else if pos.y > 300.0 {
-            vel.0.y -= CENTER_FORCE;
-        }
-        vel.0 = vel.0.clamp_length_max(settings.max_velocity);
+    if pos.y < -300.0 {
+        vel.0.y += CENTER_FORCE;
+    } else if pos.y > 300.0 {
+        vel.0.y -= CENTER_FORCE;
+    }
+    vel.0 = vel.0.clamp_length_max(settings.max_velocity);
+}
+
+fn update(
+    settings: Res<BoidSettings>,
+    quadtree: Res<KDTree2<Boid>>,
+    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+    other: Query<(&Transform, &Velocity), With<Boid>>,
+) {
+    for (transform, mut next_vel) in boids.iter_mut() {
+        let this_pos = transform.translation.xy();
+        let nearby = quadtree
+            .within_distance(this_pos, settings.visual_range)
+            .into_iter()
+            .filter_map(|(_, entity)| entity)
+            .filter_map(|entity| other.get(entity).ok())
+            .collect::<Vec<(&Transform, &Velocity)>>();
+
+        coherence(&settings, transform, &mut next_vel, &nearby);
+        separation(&settings, transform, &mut next_vel, &nearby);
+        alignment(&settings, &mut next_vel, &nearby);
+        bounds(&settings, transform, &mut next_vel);
     }
 }
 
