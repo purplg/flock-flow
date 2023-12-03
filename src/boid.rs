@@ -190,15 +190,20 @@ struct Separation {
 fn separation(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Boid>>,
-    mut boids: Query<(&Transform, &mut Separation), With<Boid>>,
+    mut boids: Query<(Entity, &Transform, &mut Separation), With<Boid>>,
 ) {
-    for (transform, mut separation) in boids.iter_mut() {
+    for (this_entity, transform, mut separation) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
         let mut c = Vec2::ZERO;
 
         for (other_pos, _entity) in quadtree
             .within_distance(this_pos, settings.avoid_range)
             .into_iter()
+            .filter(|(_pos, entity)| {
+                entity
+                    .map(|entity| entity != this_entity)
+                    .unwrap_or_default()
+            })
         {
             c += this_pos - other_pos;
         }
