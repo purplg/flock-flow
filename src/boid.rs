@@ -31,9 +31,12 @@ impl Plugin for BoidPlugin {
         app.add_systems(Startup, startup);
         app.add_systems(Update, input);
         app.add_systems(Update, spawn);
+        app.add_systems(Update, coherence);
+        app.add_systems(Update, separation);
+        app.add_systems(Update, alignment);
         app.add_systems(Update, hit);
         app.add_systems(Update, cooldown);
-        app.add_systems(Update, (update, step).chain());
+        app.add_systems(Update, step);
         app.add_systems(Update, gizmo);
     }
 }
@@ -69,9 +72,6 @@ struct Boid;
 #[derive(Component, Default, Deref, DerefMut, Reflect)]
 struct Velocity(pub Vec2);
 
-#[derive(Component, Default, Deref, DerefMut)]
-struct NextVelocity(pub Vec2);
-
 fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
     events.send_batch(
         (&mut **rng)
@@ -91,7 +91,7 @@ fn input(
     mut rng: ResMut<RngSource>,
     mut input_events: EventReader<InputEvent>,
     mut game_events: EventWriter<GameEvent>,
-    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+    mut boids: Query<(&Transform, &mut Velocity), With<Boid>>,
 ) {
     for event in input_events.read() {
         match event {
@@ -136,7 +136,9 @@ fn spawn(
                 let y = rng.gen::<f32>() * 200. - 100.;
                 let vel = Vec2 { x, y } * 20.;
                 entity.insert(Velocity(vel));
-                entity.insert(NextVelocity(vel));
+                entity.insert(Coherence::default());
+                entity.insert(Separation::default());
+                entity.insert(Alignment::default());
                 entity.insert(TransformBundle {
                     local: Transform::from_xyz(pos.x, pos.y, 0.0),
                     ..default()
@@ -147,114 +149,127 @@ fn spawn(
     }
 }
 
+#[derive(Component, Default)]
+struct Coherence {
+    effect: Vec2,
+}
+
 fn coherence(
-    settings: &BoidSettings,
-    transform: &Transform,
-    vel: &mut NextVelocity,
-    nearby: &Vec<(&Transform, &Velocity)>,
+    settings: Res<BoidSettings>,
+    quadtree: Res<KDTree2<Boid>>,
+    mut boids: Query<(&Transform, &mut Coherence), With<Boid>>,
 ) {
-    let this_pos = transform.translation.xy();
-    let mut masses = Vec2::ZERO;
-    let mut count = 0;
-    for nearby in nearby
-        .iter()
-        .map(|(other_trans, _)| other_trans.translation.xy())
-    {
-        masses += nearby;
-        count += 1;
+    for (transform, mut coherence) in boids.iter_mut() {
+        let this_pos = transform.translation.xy();
+
+        let mut masses = -this_pos;
+        let mut count = -1;
+
+        for (position, _entity) in quadtree
+            .within_distance(this_pos, settings.visual_range)
+            .into_iter()
+        {
+            masses += position;
+            count += 1;
+        }
+
+        if count > 0 {
+            coherence.effect = (masses / count as f32) * settings.coherence;
+        }
     }
+}
 
-    if count == 0 {
-        return;
-    };
-
-    vel.0 += ((masses / count as f32) - this_pos) * settings.coherence;
+#[derive(Component, Default)]
+struct Separation {
+    effect: Vec2,
 }
 
 fn separation(
-    settings: &BoidSettings,
-    transform: &Transform,
-    vel: &mut NextVelocity,
-    nearby: &Vec<(&Transform, &Velocity)>,
+    settings: Res<BoidSettings>,
+    quadtree: Res<KDTree2<Boid>>,
+    mut boids: Query<(&Transform, &mut Separation), With<Boid>>,
 ) {
-    let this_pos = transform.translation.xy();
-    let mut c = Vec2::ZERO;
-    for other_pos in nearby
-        .into_iter()
-        .map(|(other_trans, _)| other_trans.translation.xy())
-        .filter(|other_pos| {
-            (*other_pos - this_pos).length_squared() < settings.avoid_range * settings.avoid_range
-        })
-    {
-        c += this_pos - other_pos;
+    for (transform, mut separation) in boids.iter_mut() {
+        let this_pos = transform.translation.xy();
+        let mut c = Vec2::ZERO;
+
+        for (other_pos, _entity) in quadtree
+            .within_distance(this_pos, settings.avoid_range)
+            .into_iter()
+        {
+            c += this_pos - other_pos;
+        }
+
+        separation.effect = c * settings.separation;
     }
-    vel.0 += c * settings.separation;
+}
+
+#[derive(Component, Default)]
+struct Alignment {
+    effect: Vec2,
 }
 
 fn alignment(
-    settings: &BoidSettings,
-    vel: &mut NextVelocity,
-    nearby: &Vec<(&Transform, &Velocity)>,
-) {
-    let mut velocities = Vec2::ZERO;
-    let mut count = 0;
-    for nearby in nearby.into_iter().map(|(_, other_vel)| other_vel.0) {
-        velocities += nearby;
-        count += 1;
-    }
-
-    if count == 0 {
-        return;
-    };
-
-    vel.0 += (velocities / count as f32) * settings.alignment;
-}
-
-fn bounds(settings: &BoidSettings, transform: &Transform, vel: &mut NextVelocity) {
-    const CENTER_FORCE: f32 = 100.0;
-    let pos = transform.translation.xy();
-    if pos.x < -500.0 {
-        vel.0.x += CENTER_FORCE;
-    } else if pos.x > 500.0 {
-        vel.0.x -= CENTER_FORCE;
-    }
-
-    if pos.y < -300.0 {
-        vel.0.y += CENTER_FORCE;
-    } else if pos.y > 300.0 {
-        vel.0.y -= CENTER_FORCE;
-    }
-    vel.0 = vel.0.clamp_length_max(settings.max_velocity);
-}
-
-fn update(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Boid>>,
-    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
-    other: Query<(&Transform, &Velocity), With<Boid>>,
+    mut boids: Query<(&Transform, &Velocity, &mut Alignment), With<Boid>>,
+    other: Query<&Velocity, With<Boid>>,
 ) {
-    for (transform, mut next_vel) in boids.iter_mut() {
+    for (transform, vel, mut alignment) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
-        let nearby = quadtree
+        let mut velocities = -vel.0;
+        let mut count = -1;
+        for vel in quadtree
             .within_distance(this_pos, settings.visual_range)
             .into_iter()
             .filter_map(|(_, entity)| entity)
             .filter_map(|entity| other.get(entity).ok())
-            .collect::<Vec<(&Transform, &Velocity)>>();
+        {
+            velocities += vel.0;
+            count += 1;
+        }
 
-        coherence(&settings, transform, &mut next_vel, &nearby);
-        separation(&settings, transform, &mut next_vel, &nearby);
-        alignment(&settings, &mut next_vel, &nearby);
-        bounds(&settings, transform, &mut next_vel);
+        if count == 0 {
+            return;
+        };
+
+        alignment.effect = (velocities / count as f32) * settings.alignment;
     }
 }
 
 fn step(
-    mut boids: Query<(&mut Transform, &NextVelocity, &mut Velocity), With<Boid>>,
+    settings: Res<BoidSettings>,
+    mut boids: Query<
+        (
+            &mut Transform,
+            &mut Velocity,
+            &Coherence,
+            &Separation,
+            &Alignment,
+        ),
+        With<Boid>,
+    >,
     time: Res<Time>,
 ) {
-    for (mut transform, next_vel, mut vel) in boids.iter_mut() {
-        vel.0 = next_vel.0;
+    for (mut transform, mut vel, coherence, separation, alignment) in boids.iter_mut() {
+        vel.0 += coherence.effect;
+        vel.0 += separation.effect;
+        vel.0 += alignment.effect;
+
+        const CENTER_FORCE: f32 = 100.0;
+        let pos = transform.translation.xy();
+        if pos.x < -500.0 {
+            vel.0.x += CENTER_FORCE;
+        } else if pos.x > 500.0 {
+            vel.0.x -= CENTER_FORCE;
+        }
+
+        if pos.y < -300.0 {
+            vel.0.y += CENTER_FORCE;
+        } else if pos.y > 300.0 {
+            vel.0.y -= CENTER_FORCE;
+        }
+        vel.0 = vel.clamp_length_max(settings.max_velocity);
         transform.translation += vel.extend(0.0) * time.delta_seconds();
     }
 }
