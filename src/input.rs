@@ -4,6 +4,7 @@ pub struct InputPlugin;
 
 #[derive(Debug, Event)]
 pub enum InputEvent {
+    Move(Vec2),
     Schwack(Vec2),
     SpawnBoid,
 }
@@ -45,5 +46,16 @@ fn mouse_button(
 fn keyboard(keys: Res<Input<KeyCode>>, mut event_writer: EventWriter<InputEvent>) {
     if keys.just_pressed(KeyCode::Space) {
         event_writer.send(InputEvent::SpawnBoid);
+    }
+    if keys.pressed(KeyCode::W) {
+        event_writer.send(InputEvent::Move(Vec2::Y));
+    } else if keys.pressed(KeyCode::S) {
+        event_writer.send(InputEvent::Move(-Vec2::Y));
+    }
+
+    if keys.pressed(KeyCode::D) {
+        event_writer.send(InputEvent::Move(Vec2::X));
+    } else if keys.pressed(KeyCode::A) {
+        event_writer.send(InputEvent::Move(-Vec2::X));
     }
 }

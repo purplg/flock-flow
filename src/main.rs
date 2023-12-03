@@ -2,14 +2,10 @@ mod boid;
 mod camera;
 mod input;
 mod node;
+mod player;
 mod rng;
 
-use bevy::{
-    app::AppExit,
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    log::LogPlugin,
-    prelude::*,
-};
+use bevy::{app::AppExit, log::LogPlugin, prelude::*};
 
 struct CorePlugin;
 
@@ -17,6 +13,7 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<GameEvent>();
         app.add_plugins(input::InputPlugin);
+        app.add_plugins(player::PlayerPlugin);
         app.add_plugins(rng::RngPlugin);
         app.add_plugins(camera::CameraPlugin);
         app.add_plugins(boid::BoidPlugin);
@@ -67,15 +64,20 @@ fn main() {
         ..default()
     }));
     app.add_plugins(CorePlugin);
-    // app.add_plugins(EditorPlugin {
-    //     window: EditorWindowPlacement::New(Window {
-    //         title: "Bevy App Debug".to_string(),
-    //         ..default()
-    //     }),
-    // });
 
-    app.add_plugins(LogDiagnosticsPlugin::default());
-    app.add_plugins(FrameTimeDiagnosticsPlugin);
+    #[cfg(debug_assertions)]
+    {
+        use bevy_editor_pls::{EditorPlugin, EditorWindowPlacement};
+        app.add_plugins(EditorPlugin {
+            window: EditorWindowPlacement::New(Window {
+                title: "Bevy App Debug".to_string(),
+                ..default()
+            }),
+        });
+        use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+        app.add_plugins(LogDiagnosticsPlugin::default());
+        app.add_plugins(FrameTimeDiagnosticsPlugin);
+    }
     app.run();
 }
 

@@ -114,6 +114,7 @@ fn input(
                     vel.0 += (pos - *schwak_pos) * 10.;
                 }
             }
+            InputEvent::Move(_) => {}
         }
     }
 }
