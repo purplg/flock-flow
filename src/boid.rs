@@ -222,21 +222,19 @@ fn bounds(
     mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
 ) {
     for (transform, mut vel) in boids.iter_mut() {
-        let mut force = Vec2::ZERO;
         const CENTER_FORCE: f32 = 100.0;
         let pos = transform.translation.xy();
         if pos.x < -500.0 {
-            force.x += CENTER_FORCE;
+            vel.0.x += CENTER_FORCE;
         } else if pos.x > 500.0 {
-            force.x -= CENTER_FORCE;
+            vel.0.x -= CENTER_FORCE;
         }
 
         if pos.y < -300.0 {
-            force.y += CENTER_FORCE;
+            vel.0.y += CENTER_FORCE;
         } else if pos.y > 300.0 {
-            force.y -= CENTER_FORCE;
+            vel.0.y -= CENTER_FORCE;
         }
-        vel.0 += force;
         vel.0 = vel.0.clamp_length_max(settings.max_velocity);
     }
 }
