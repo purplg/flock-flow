@@ -17,15 +17,26 @@ impl Plugin for BoidPlugin {
             visual_range: 50.0,
             avoid_range: 50.0 * 0.3,
             max_velocity: 200.0,
+        });
+        app.insert_resource(BoidDebugSettings {
             show_cluster_range: true,
             show_avoid_range: true,
             show_direction: false,
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
+        app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
         app.add_systems(Startup, spawn);
         app.add_systems(Update, (nearby, update, step).chain());
         app.add_systems(Update, gizmo);
     }
+}
+
+#[derive(Reflect, Resource, Default, InspectorOptions)]
+#[reflect(Resource)]
+struct BoidDebugSettings {
+    show_cluster_range: bool,
+    show_avoid_range: bool,
+    show_direction: bool,
 }
 
 #[derive(Reflect, Resource, Default, InspectorOptions)]
@@ -43,9 +54,6 @@ struct BoidSettings {
     avoid_range: f32,
     #[inspector(min = 0.0)]
     max_velocity: f32,
-    show_cluster_range: bool,
-    show_avoid_range: bool,
-    show_direction: bool,
 }
 
 #[derive(Component)]
@@ -218,24 +226,25 @@ fn step(
 fn gizmo(
     mut gizmos: Gizmos,
     settings: Res<BoidSettings>,
+    debug_settings: Res<BoidDebugSettings>,
     boids: Query<(&Transform, &Velocity), With<Boid>>,
 ) {
     for (transform, velocity) in boids.iter() {
-        if settings.show_cluster_range {
+        if debug_settings.show_cluster_range {
             gizmos.circle_2d(
                 transform.translation.xy(),
                 settings.visual_range,
                 Color::rgba(1.0, 0.0, 0.0, 0.1),
             );
         }
-        if settings.show_avoid_range {
+        if debug_settings.show_avoid_range {
             gizmos.circle_2d(
                 transform.translation.xy(),
                 settings.avoid_range,
                 Color::rgba(1.0, 1.0, 0.0, 0.1),
             );
         }
-        if settings.show_direction {
+        if debug_settings.show_direction {
             gizmos.line_2d(
                 transform.translation.xy(),
                 transform.translation.xy() + velocity.0.normalize_or_zero() * 10.0,
