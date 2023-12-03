@@ -162,6 +162,7 @@ fn coherence(
     for (transform, mut coherence) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
 
+        // Exclude self from masses.
         let mut masses = -this_pos;
         let mut count = -1;
 
@@ -174,7 +175,9 @@ fn coherence(
         }
 
         if count > 0 {
-            coherence.effect = (masses / count as f32) * settings.coherence;
+            coherence.effect = ((masses / count as f32) - this_pos) * settings.coherence;
+        } else {
+            coherence.effect = Vec2::ZERO;
         }
     }
 }
