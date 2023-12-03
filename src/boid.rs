@@ -233,6 +233,7 @@ fn alignment(
         }
 
         if count == 0 {
+            alignment.effect = Vec2::ZERO;
             return;
         };
 
