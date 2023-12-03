@@ -34,6 +34,7 @@ impl Plugin for BoidPlugin {
         app.add_systems(Update, separation);
         app.add_systems(Update, alignment);
         app.add_systems(Update, eat);
+        app.add_systems(Update, cooldown);
         app.add_systems(PostUpdate, (bounds, step).chain());
         app.add_systems(Update, gizmo);
     }
@@ -282,15 +283,33 @@ fn step(
     }
 }
 
+#[derive(Component)]
+struct EatCooldown(f32);
+
+fn cooldown(
+    mut commands: Commands,
+    mut cooldown: Query<(Entity, &mut EatCooldown)>,
+    time: Res<Time>,
+) {
+    for (entity, mut cooldown) in cooldown.iter_mut() {
+        cooldown.0 -= time.delta_seconds();
+        if cooldown.0 < 0.0 {
+            commands.entity(entity).remove::<EatCooldown>();
+        }
+    }
+}
+
 fn eat(
-    boids: Query<&Transform, With<Boid>>,
+    mut commands: Commands,
+    boids: Query<(Entity, &Transform), (With<Boid>, Without<EatCooldown>)>,
     foods: Query<(Entity, &Transform), With<Health>>,
     mut events: EventWriter<GameEvent>,
 ) {
-    for boid in boids.iter() {
-        for (entity, node) in foods.iter() {
+    for (boid_entity, boid) in boids.iter() {
+        for (food_entity, node) in foods.iter() {
             if boid.translation.distance_squared(node.translation) < 10.0 * 10.0 {
-                events.send(GameEvent::HurtNode(entity, 10))
+                events.send(GameEvent::HurtNode(food_entity, 10));
+                commands.entity(boid_entity).insert(EatCooldown(5.));
             }
         }
     }
