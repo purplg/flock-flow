@@ -19,18 +19,17 @@ impl Plugin for BoidPlugin {
             max_velocity: 200.0,
         });
         app.insert_resource(BoidDebugSettings {
-            show_cluster_range: true,
-            show_avoid_range: true,
-            show_direction: false,
+            show_cluster_range: false,
+            show_avoid_range: false,
+            show_direction: true,
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
-        app.add_systems(Startup, spawn);
         app.add_systems(PreUpdate, nearby);
+        app.add_systems(Update, input);
         app.add_systems(Update, coherence);
         app.add_systems(Update, separation);
         app.add_systems(Update, alignment);
-        app.add_systems(Update, schwack);
         app.add_systems(PostUpdate, (bounds, step).chain());
         app.add_systems(Update, gizmo);
     }
@@ -73,30 +72,49 @@ struct NextVelocity(pub Vec2);
 #[derive(Component, Default, Deref, DerefMut)]
 struct Nearby(pub Vec<Entity>);
 
-fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResMut<RngSource>) {
-    let rng = &mut **rng;
-    for i in 0..1000 {
-        let mut entity = commands.spawn_empty();
-        entity.insert(Name::new(format!("Boid {}", i)));
-        entity.insert(SpriteBundle {
-            texture: asset_server.load("boid.png"),
-            ..default()
-        });
-        entity.insert(Boid);
-        entity.insert(Nearby::default());
-        let x = rng.gen::<f32>() * 200. - 100.;
-        let y = rng.gen::<f32>() * 200. - 100.;
-        let vel = Vec2 { x, y } * 20.;
-        entity.insert(Velocity(vel));
-        entity.insert(NextVelocity(vel));
-        entity.insert(TransformBundle {
-            local: Transform::from_xyz(
-                rng.gen::<f32>() * 1000. - 500.,
-                rng.gen::<f32>() * 600. - 300.,
-                0.0,
-            ),
-            ..default()
-        });
+fn input(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut rng: ResMut<RngSource>,
+    mut events: EventReader<InputEvent>,
+    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
+) {
+    for event in events.read() {
+        match event {
+            InputEvent::SpawnBoid => {
+                let rng = &mut **rng;
+                let mut entity = commands.spawn_empty();
+                entity.insert(Name::new("Boid"));
+                entity.insert(SpriteBundle {
+                    texture: asset_server.load("boid.png"),
+                    ..default()
+                });
+                entity.insert(Boid);
+                entity.insert(Nearby::default());
+                let x = rng.gen::<f32>() * 200. - 100.;
+                let y = rng.gen::<f32>() * 200. - 100.;
+                let vel = Vec2 { x, y } * 20.;
+                entity.insert(Velocity(vel));
+                entity.insert(NextVelocity(vel));
+                entity.insert(TransformBundle {
+                    local: Transform::from_xyz(
+                        rng.gen::<f32>() * 1000. - 500.,
+                        rng.gen::<f32>() * 600. - 300.,
+                        0.0,
+                    ),
+                    ..default()
+                });
+            }
+            InputEvent::Schwack(schwak_pos) => {
+                for (pos, mut vel) in boids
+                    .iter_mut()
+                    .map(|(trans, vel)| (trans.translation.xy(), vel))
+                    .filter(|(pos, _)| (*pos - *schwak_pos).length_squared() < 100. * 100.)
+                {
+                    vel.0 += (pos - *schwak_pos) * 10.;
+                }
+            }
+        }
     }
 }
 
@@ -195,25 +213,6 @@ fn alignment(
             / count as f32;
 
         vel.0 += (average_vel - this_pos) * settings.alignment;
-    }
-}
-
-fn schwack(
-    mut input: EventReader<InputEvent>,
-    mut boids: Query<(&Transform, &mut NextVelocity), With<Boid>>,
-) {
-    let Some(schwak_pos) = input.read().find_map(|event| match event {
-        InputEvent::Schwack(pos) => Some(pos),
-    }) else {
-        return;
-    };
-
-    for (pos, mut vel) in boids
-        .iter_mut()
-        .map(|(trans, vel)| (trans.translation.xy(), vel))
-        .filter(|(pos, _)| (*pos - *schwak_pos).length_squared() < 100. * 100.)
-    {
-        vel.0 += (pos - *schwak_pos) * 10.;
     }
 }
 

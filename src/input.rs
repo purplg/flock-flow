@@ -5,12 +5,14 @@ pub struct InputPlugin;
 #[derive(Debug, Event)]
 pub enum InputEvent {
     Schwack(Vec2),
+    SpawnBoid,
 }
 
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<InputEvent>();
         app.add_systems(Update, mouse_button);
+        app.add_systems(Update, keyboard);
     }
 }
 
@@ -37,5 +39,11 @@ fn mouse_button(
         if MouseButton::Left == *button {
             input_event.send(InputEvent::Schwack(click_position));
         }
+    }
+}
+
+fn keyboard(keys: Res<Input<KeyCode>>, mut event_writer: EventWriter<InputEvent>) {
+    if keys.just_pressed(KeyCode::Space) {
+        event_writer.send(InputEvent::SpawnBoid);
     }
 }
