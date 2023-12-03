@@ -162,22 +162,14 @@ fn coherence(
     for (transform, mut coherence) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
 
-        // Exclude self from masses.
-        let mut masses = -this_pos;
-        let mut count = -1;
-
-        for (position, _entity) in quadtree
-            .within_distance(this_pos, settings.visual_range)
-            .into_iter()
-        {
-            masses += position;
-            count += 1;
-        }
-
-        if count > 0 {
-            coherence.effect = ((masses / count as f32) - this_pos) * settings.coherence;
+        let nearby = quadtree.within_distance(this_pos, settings.visual_range);
+        let count = nearby.len();
+        coherence.effect = if count > 1 {
+            let masses: Vec2 =
+                nearby.into_iter().map(|(pos, _entity)| pos).sum::<Vec2>() - this_pos;
+            ((masses / (count - 1) as f32) - this_pos) * settings.coherence
         } else {
-            coherence.effect = Vec2::ZERO;
+            Vec2::ZERO
         }
     }
 }
