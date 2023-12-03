@@ -17,11 +17,11 @@ impl Plugin for BoidPlugin {
         app.register_type::<Separation>();
         app.register_type::<Alignment>();
         app.insert_resource(BoidSettings {
-            coherence: 0.005,
-            separation: 0.05,
-            alignment: 0.005,
-            visual_range: 50.0,
-            avoid_range: 50.0 * 0.3,
+            coherence: 0.192,
+            separation: 0.487,
+            alignment: 0.435,
+            visual_range: 15.0,
+            avoid_range: 10.0,
             max_velocity: 200.0,
         });
         app.insert_resource(BoidDebugSettings {
