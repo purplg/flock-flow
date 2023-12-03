@@ -11,19 +11,19 @@ impl Plugin for BoidPlugin {
         app.register_type::<BoidSettings>();
         app.register_type::<Velocity>();
         app.insert_resource(BoidSettings {
-            coherence: 0.7,
-            separation: 0.01,
-            alignment: 0.34,
-            center_force_stength: 0.00,
-            visual_range: 100.0,
+            coherence: 0.005,
+            separation: 0.05,
+            alignment: 0.005,
+            visual_range: 50.0,
+            avoid_range: 50.0 * 0.3,
             max_velocity: 200.0,
-            show_range: false,
+            show_cluster_range: true,
+            show_avoid_range: true,
             show_direction: false,
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_systems(Startup, spawn);
-        app.add_systems(PreUpdate, nearby);
-        app.add_systems(Update, (update, step).chain());
+        app.add_systems(Update, (nearby, update, step).chain());
         app.add_systems(Update, gizmo);
     }
 }
@@ -37,13 +37,14 @@ struct BoidSettings {
     separation: f32,
     #[inspector(min = 0.0, speed = 0.001)]
     alignment: f32,
-    #[inspector(min = 0.0, speed = 0.001)]
-    center_force_stength: f32,
     #[inspector(min = 0.0)]
     visual_range: f32,
     #[inspector(min = 0.0)]
+    avoid_range: f32,
+    #[inspector(min = 0.0)]
     max_velocity: f32,
-    show_range: bool,
+    show_cluster_range: bool,
+    show_avoid_range: bool,
     show_direction: bool,
 }
 
@@ -72,9 +73,9 @@ fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResMut
         entity.insert(Nearby::default());
         let x = rng.gen::<f32>() * 200. - 100.;
         let y = rng.gen::<f32>() * 200. - 100.;
-        let vel = Vec2 { x, y };
-        entity.insert(Velocity(vel * 20.0));
-        entity.insert(NextVelocity(vel * 20.0));
+        let vel = Vec2 { x, y } * 20.;
+        entity.insert(Velocity(vel));
+        entity.insert(NextVelocity(vel));
         entity.insert(TransformBundle {
             local: Transform::from_xyz(
                 rng.gen::<f32>() * 1000. - 500.,
@@ -100,9 +101,7 @@ fn nearby(
             }
 
             let other_pos = other_trans.translation.xy();
-            if (other_pos - this_pos).length_squared()
-                > settings.visual_range * settings.visual_range
-            {
+            if (other_pos - this_pos).length() > settings.visual_range {
                 continue;
             }
 
@@ -115,80 +114,80 @@ fn coherence(
     settings: &BoidSettings,
     transform: &Transform,
     nearby: &Nearby,
-    vel: &mut NextVelocity,
-    other: &Query<(&Transform, &Velocity), With<Boid>>,
-) {
+    boids: &Query<(&Transform, &Velocity), With<Boid>>,
+) -> Vec2 {
     let count = nearby.len();
     if count == 0 {
-        return;
+        return Vec2::ZERO;
     }
+
     let this_pos = transform.translation.xy();
     let center_of_mass: Vec2 = nearby
         .iter()
-        .filter_map(|other_entity| other.get(*other_entity).ok())
+        .filter_map(|other_entity| boids.get(*other_entity).ok())
         .map(|(other_trans, _)| other_trans.translation.xy())
         .sum::<Vec2>()
         / count as f32;
-    vel.0 += (center_of_mass - this_pos) * 0.1 * settings.coherence;
+    (center_of_mass - this_pos) * settings.coherence
 }
 
 fn separation(
     settings: &BoidSettings,
     transform: &Transform,
     nearby: &Nearby,
-    vel: &mut NextVelocity,
-    other: &Query<(&Transform, &Velocity), With<Boid>>,
-) {
+    boids: &Query<(&Transform, &Velocity), With<Boid>>,
+) -> Vec2 {
     let this_pos = transform.translation.xy();
     let mut c = Vec2::ZERO;
-    for nearby_pos in nearby
+    for other_pos in nearby
         .iter()
-        .filter_map(|entity| other.get(*entity).ok())
+        .filter_map(|entity| boids.get(*entity).ok())
         .map(|(other_trans, _)| other_trans.translation.xy())
+        .filter(|other_pos| (*other_pos - this_pos).length() < settings.avoid_range)
     {
-        let diff = nearby_pos - this_pos;
-        c -= diff * 0.1 * settings.separation;
+        c += this_pos - other_pos;
     }
-    vel.0 += c;
+    c * settings.separation
 }
 
 fn alignment(
     settings: &BoidSettings,
     transform: &Transform,
     nearby: &Nearby,
-    vel: &mut NextVelocity,
-    other: &Query<(&Transform, &Velocity), With<Boid>>,
-) {
+    boids: &Query<(&Transform, &Velocity), With<Boid>>,
+) -> Vec2 {
     let count = nearby.len();
     if count == 0 {
-        return;
+        return Vec2::ZERO;
     }
+
     let this_pos = transform.translation.xy();
     let average_vel: Vec2 = nearby
         .iter()
-        .filter_map(|other_entity| other.get(*other_entity).ok())
+        .filter_map(|other_entity| boids.get(*other_entity).ok())
         .map(|(_, other_vel)| other_vel.0)
         .sum::<Vec2>()
         / count as f32;
-    vel.0 += (average_vel - this_pos) * 0.1 * settings.alignment;
+
+    (average_vel - this_pos) * settings.alignment
 }
 
-fn bounds(settings: &BoidSettings, transform: &Transform, vel: &mut Vec2) {
+fn bounds(transform: &Transform) -> Vec2 {
+    let mut force = Vec2::ZERO;
     const CENTER_FORCE: f32 = 100.0;
     let pos = transform.translation.xy();
     if pos.x < -500.0 {
-        vel.x += CENTER_FORCE;
+        force.x += CENTER_FORCE;
     } else if pos.x > 500.0 {
-        vel.x -= CENTER_FORCE;
+        force.x -= CENTER_FORCE;
     }
 
     if pos.y < -300.0 {
-        vel.y += CENTER_FORCE;
+        force.y += CENTER_FORCE;
     } else if pos.y > 300.0 {
-        vel.y -= CENTER_FORCE;
+        force.y -= CENTER_FORCE;
     }
-
-    *vel = vel.clamp_length_max(settings.max_velocity);
+    force
 }
 
 fn update(
@@ -197,10 +196,12 @@ fn update(
     other: Query<(&Transform, &Velocity), With<Boid>>,
 ) {
     for (transform, mut next_vel, nearby) in boids.iter_mut() {
-        coherence(&settings, &transform, nearby, &mut next_vel, &other);
-        separation(&settings, &transform, nearby, &mut next_vel, &other);
-        alignment(&settings, &transform, nearby, &mut next_vel, &other);
-        bounds(&settings, &transform, &mut next_vel.0);
+        next_vel.0 = next_vel.0
+            + coherence(&settings, &transform, nearby, &other)
+            + separation(&settings, &transform, nearby, &other)
+            + alignment(&settings, &transform, nearby, &other)
+            + bounds(&transform);
+        next_vel.0 = next_vel.0.clamp_length_max(settings.max_velocity);
     }
 }
 
@@ -220,11 +221,18 @@ fn gizmo(
     boids: Query<(&Transform, &Velocity), With<Boid>>,
 ) {
     for (transform, velocity) in boids.iter() {
-        if settings.show_range {
+        if settings.show_cluster_range {
             gizmos.circle_2d(
                 transform.translation.xy(),
                 settings.visual_range,
                 Color::rgba(1.0, 0.0, 0.0, 0.1),
+            );
+        }
+        if settings.show_avoid_range {
+            gizmos.circle_2d(
+                transform.translation.xy(),
+                settings.avoid_range,
+                Color::rgba(1.0, 1.0, 0.0, 0.1),
             );
         }
         if settings.show_direction {
