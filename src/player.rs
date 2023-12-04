@@ -4,11 +4,12 @@ use rand::Rng;
 
 use crate::{
     boid::{Alignment, Boid, Velocity},
-    input::InputEvent,
     collectible::Collectible,
+    input::InputEvent,
+    points::PointEvent,
     rng::RngSource,
     track::Tracked,
-    GameEvent, Health,
+    Health,
 };
 
 #[derive(Component)]
@@ -72,10 +73,11 @@ fn movement(
 }
 
 fn collect(
+    mut commands: Commands,
     quadtree: Res<KDTree2<Tracked>>,
     boids: Query<&Transform, With<Player>>,
-    collectibles: Query<Entity, With<Collectible>>,
-    mut events: EventWriter<GameEvent>,
+    collectibles: Query<(Entity, &Collectible)>,
+    mut point_event: EventWriter<PointEvent>,
 ) {
     for player in boids.iter() {
         let pos = player.translation.xy();
@@ -84,8 +86,9 @@ fn collect(
             .into_iter()
             .filter_map(|(_, entity)| entity)
         {
-            if let Ok(entity) = collectibles.get(entity) {
-                events.send(GameEvent::Collect(entity));
+            if let Ok((entity, collectible)) = collectibles.get(entity) {
+                commands.entity(entity).despawn();
+                point_event.send(PointEvent::Add(collectible.value));
                 break;
             }
         }

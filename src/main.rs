@@ -39,7 +39,6 @@ pub enum GameEvent {
         amount: u32,
         velocity: Vec2,
     },
-    Collect(Entity),
 }
 
 #[derive(Component)]
