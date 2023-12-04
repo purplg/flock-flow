@@ -1,5 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
+use crate::camera::PlayerCamera;
+
 pub struct InputPlugin;
 
 #[derive(Debug, Event)]
@@ -19,7 +21,7 @@ impl Plugin for InputPlugin {
 
 fn mouse_button(
     windows: Query<&Window, With<PrimaryWindow>>,
-    camera: Query<(&Camera, &GlobalTransform)>,
+    camera: Query<(&Camera, &GlobalTransform), With<PlayerCamera>>,
     mut input_event: EventWriter<InputEvent>,
     buttons: Res<Input<MouseButton>>,
 ) {

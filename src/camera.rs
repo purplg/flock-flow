@@ -10,9 +10,13 @@ impl Plugin for CameraPlugin {
     }
 }
 
+#[derive(Component)]
+pub struct PlayerCamera;
+
 fn spawn(mut commands: Commands) {
     let mut entity = commands.spawn_empty();
     entity.insert(Camera2dBundle::default());
+    entity.insert(PlayerCamera);
 }
 
 fn gizmo(mut gizmos: Gizmos, cameras: Query<&Camera2d>) {
