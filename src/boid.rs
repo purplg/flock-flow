@@ -113,13 +113,13 @@ fn input(
                     y: rng.gen::<f32>() * 600. - 300.,
                 }));
             }
-            InputEvent::Schwack(schwak_pos) => {
+            InputEvent::Schwack(schwack_pos) => {
                 for (pos, mut vel) in boids
                     .iter_mut()
                     .map(|(trans, vel)| (trans.translation.xy(), vel))
-                    .filter(|(pos, _)| (*pos - *schwak_pos).length_squared() < 100. * 100.)
+                    .filter(|(pos, _)| (*pos - *schwack_pos).length_squared() < 100. * 100.)
                 {
-                    vel.0 += (pos - *schwak_pos) * 10.;
+                    vel.0 += (pos - *schwack_pos) * 10.;
                 }
             }
             InputEvent::Move(_) => {}
