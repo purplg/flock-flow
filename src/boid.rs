@@ -1,16 +1,15 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
-use bevy_spatial::{kdtree::KDTree2, AutomaticUpdate, SpatialAccess, SpatialStructure};
+use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
-use crate::{input::InputEvent, player::Player, rng::RngSource, GameEvent};
+use crate::{input::InputEvent, player::Player, rng::RngSource, track::Tracked, GameEvent};
 
 pub struct BoidPlugin;
 
 impl Plugin for BoidPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(AutomaticUpdate::<Boid>::new().with_spatial_ds(SpatialStructure::KDTree2));
         app.register_type::<BoidSettings>();
         app.register_type::<Velocity>();
         app.register_type::<Coherence>();
@@ -101,7 +100,7 @@ fn input(
     mut rng: ResMut<RngSource>,
     mut input_events: EventReader<InputEvent>,
     mut game_events: EventWriter<GameEvent>,
-    quadtree: Res<KDTree2<Boid>>,
+    quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<&mut Velocity, (With<Boid>, Without<Player>)>,
 ) {
     for event in input_events.read() {
@@ -150,6 +149,7 @@ fn spawn(
                 ..default()
             });
             entity.insert(Boid);
+            entity.insert(Tracked);
             let x = rng.gen::<f32>() * 200. - 100.;
             let y = rng.gen::<f32>() * 200. - 100.;
             let vel = Vec2 { x, y } * 20.;
@@ -172,7 +172,7 @@ pub struct Coherence {
 
 fn coherence(
     settings: Res<BoidSettings>,
-    quadtree: Res<KDTree2<Boid>>,
+    quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<(&Transform, &mut Coherence)>,
 ) {
     for (transform, mut coherence) in boids.iter_mut() {
@@ -203,7 +203,7 @@ pub struct Separation {
 
 fn separation(
     settings: Res<BoidSettings>,
-    quadtree: Res<KDTree2<Boid>>,
+    quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<(Entity, &Transform, &mut Separation)>,
 ) {
     for (this_entity, transform, mut separation) in boids.iter_mut() {
@@ -239,7 +239,7 @@ pub struct Alignment {
 
 fn alignment(
     settings: Res<BoidSettings>,
-    quadtree: Res<KDTree2<Boid>>,
+    quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<(&Transform, &Velocity, &mut Alignment)>,
     other: Query<&Velocity, With<Alignment>>,
 ) {

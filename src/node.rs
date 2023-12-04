@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{points::PointEvent, rng::RngSource, GameEvent};
+use crate::{points::PointEvent, rng::RngSource, track::Tracked, GameEvent};
 
 #[derive(Component)]
 pub struct Collectible {
@@ -25,6 +25,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
         texture: asset_server.load("node.png"),
         ..default()
     });
+    entity.insert(Tracked);
     entity.insert(Collectible { value: 1 });
     entity.insert(TransformBundle {
         local: Transform::from_xyz(

@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::GameEvent;
-
 pub struct PointsPlugin;
 
 impl Plugin for PointsPlugin {

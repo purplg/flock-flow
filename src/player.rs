@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::Rng;
 
 use crate::{
@@ -6,6 +7,7 @@ use crate::{
     input::InputEvent,
     node::Collectible,
     rng::RngSource,
+    track::Tracked,
     GameEvent, Health,
 };
 
@@ -32,6 +34,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
     });
     entity.insert(Player);
     entity.insert(Boid);
+    entity.insert(Tracked);
     entity.insert(Health(100));
     entity.insert(Velocity::default());
     entity.insert(Alignment::default());
@@ -70,14 +73,21 @@ fn movement(
 }
 
 fn collect(
+    quadtree: Res<KDTree2<Tracked>>,
     boids: Query<&Transform, With<Player>>,
-    nodes: Query<(Entity, &Transform), With<Collectible>>,
+    collectibles: Query<Entity, With<Collectible>>,
     mut events: EventWriter<GameEvent>,
 ) {
-    for boid in boids.iter() {
-        for (node_entity, node_trans) in nodes.iter() {
-            if boid.translation.distance_squared(node_trans.translation) < 10.0 * 10.0 {
-                events.send(GameEvent::Collect(node_entity));
+    for player in boids.iter() {
+        let pos = player.translation.xy();
+        for entity in quadtree
+            .within_distance(pos, 10.0)
+            .into_iter()
+            .filter_map(|(_, entity)| entity)
+        {
+            if let Ok(entity) = collectibles.get(entity) {
+                events.send(GameEvent::Collect(entity));
+                break;
             }
         }
     }

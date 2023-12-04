@@ -5,6 +5,7 @@ mod node;
 mod player;
 mod points;
 mod rng;
+mod track;
 
 use bevy::{app::AppExit, prelude::*};
 
@@ -14,6 +15,7 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<GameEvent>();
         app.add_plugins(input::InputPlugin);
+        app.add_plugins(track::TrackPlugin);
         app.add_plugins(player::PlayerPlugin);
         app.add_plugins(points::PointsPlugin);
         app.add_plugins(rng::RngPlugin);
@@ -83,9 +85,10 @@ fn main() {
                 ..default()
             }),
         });
-        use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-        app.add_plugins(LogDiagnosticsPlugin::default());
+        use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
         app.add_plugins(FrameTimeDiagnosticsPlugin);
+        use bevy::diagnostic::LogDiagnosticsPlugin;
+        app.add_plugins(LogDiagnosticsPlugin::default());
     }
     app.run();
 }
