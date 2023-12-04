@@ -27,7 +27,7 @@ impl Plugin for BoidPlugin {
         app.insert_resource(BoidDebugSettings {
             show_cluster_range: false,
             show_avoid_range: false,
-            show_direction: true,
+            show_direction: false,
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
@@ -300,6 +300,7 @@ fn step(
         }
         vel.0 = vel.clamp_length_max(settings.max_velocity);
         transform.translation += vel.extend(0.0) * time.delta_seconds();
+        transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x));
     }
 }
 
