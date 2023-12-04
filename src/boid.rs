@@ -102,7 +102,8 @@ fn input(
     mut rng: ResMut<RngSource>,
     mut input_events: EventReader<InputEvent>,
     mut game_events: EventWriter<GameEvent>,
-    mut boids: Query<(&Transform, &mut Velocity), With<Boid>>,
+    quadtree: Res<KDTree2<Boid>>,
+    mut boids: Query<&mut Velocity, (With<Boid>, Without<Player>)>,
 ) {
     for event in input_events.read() {
         match event {
@@ -118,11 +119,14 @@ fn input(
                 ))
             }
             InputEvent::Schwack(schwack_pos) => {
-                for (pos, mut vel) in boids
-                    .iter_mut()
-                    .map(|(trans, vel)| (trans.translation.xy(), vel))
-                    .filter(|(pos, _)| (*pos - *schwack_pos).length_squared() < 100. * 100.)
+                for (pos, entity) in quadtree
+                    .within_distance(*schwack_pos, 100.)
+                    .into_iter()
+                    .filter_map(|(pos, entity)| entity.map(|entity| (pos, entity)))
                 {
+                    let Ok(mut vel) = boids.get_mut(entity) else {
+                        continue;
+                    };
                     vel.0 += (pos - *schwack_pos) * 10.;
                 }
             }
