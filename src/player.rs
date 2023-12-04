@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    boid::{Alignment, Velocity},
+    boid::{Alignment, Boid, Coherence, Separation, Velocity},
     input::InputEvent,
     rng::RngSource,
     Health,
@@ -29,6 +29,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
         ..default()
     });
     entity.insert(Player);
+    entity.insert(Boid);
     entity.insert(Health(100));
     entity.insert(Velocity::default());
     entity.insert(Alignment::default());
@@ -44,33 +45,24 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
 
 fn movement(
     mut input: EventReader<InputEvent>,
-    mut player: Query<(&mut Transform, &mut Velocity, &Alignment), With<Player>>,
+    mut player: Query<&mut Velocity, With<Player>>,
     time: Res<Time>,
 ) {
-    let Ok((mut trans, mut vel, alignment)) = player.get_single_mut() else {
+    let Ok(mut vel) = player.get_single_mut() else {
         return;
     };
 
-    let mut moving = false;
     let movement = input
         .read()
         .map(|event| match event {
-            InputEvent::Move(direction) => {
-                moving = true;
-                *direction
-            }
-
+            InputEvent::Move(direction) => *direction,
             InputEvent::Schwack(_) => Vec2::ZERO,
             InputEvent::SpawnBoid => Vec2::ZERO,
         })
         .sum::<Vec2>();
 
-    vel.0 += alignment.effect;
-    if moving {
+    if movement.length_squared() > 0.0 {
         vel.0 += movement * 50.;
     }
-    vel.0 = vel.0.clamp_length_max(200.0);
-    trans.translation.x += vel.0.x * time.delta_seconds();
-    trans.translation.y += vel.0.y * time.delta_seconds();
     vel.0 = vel.0.lerp(Vec2::ZERO, time.delta_seconds() * 10.0);
 }

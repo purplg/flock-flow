@@ -34,12 +34,20 @@ impl Plugin for BoidPlugin {
         app.add_systems(Startup, startup);
         app.add_systems(Update, input);
         app.add_systems(Update, spawn);
-        app.add_systems(Update, coherence);
-        app.add_systems(Update, separation);
-        app.add_systems(Update, alignment);
+        app.add_systems(
+            Update,
+            (
+                (
+                    (coherence, coherence_apply).chain(),
+                    (separation, separation_apply).chain(),
+                    (alignment, alignment_apply).chain(),
+                ),
+                step,
+            )
+                .chain(),
+        );
         app.add_systems(Update, hit);
         app.add_systems(Update, cooldown);
-        app.add_systems(Update, step);
         app.add_systems(Update, gizmo);
     }
 }
@@ -70,7 +78,7 @@ struct BoidSettings {
 }
 
 #[derive(Component)]
-struct Boid;
+pub struct Boid;
 
 #[derive(Component, Default, Deref, DerefMut, Reflect)]
 pub struct Velocity(pub Vec2);
@@ -158,14 +166,14 @@ fn spawn(
 }
 
 #[derive(Component, Reflect, Default)]
-struct Coherence {
+pub struct Coherence {
     effect: Vec2,
 }
 
 fn coherence(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Boid>>,
-    mut boids: Query<(&Transform, &mut Coherence), With<Boid>>,
+    mut boids: Query<(&Transform, &mut Coherence)>,
 ) {
     for (transform, mut coherence) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
@@ -182,8 +190,14 @@ fn coherence(
     }
 }
 
+fn coherence_apply(mut boids: Query<(&mut Velocity, &Coherence)>) {
+    for (mut vel, coherence) in boids.iter_mut() {
+        vel.0 += coherence.effect;
+    }
+}
+
 #[derive(Component, Reflect, Default)]
-struct Separation {
+pub struct Separation {
     effect: Vec2,
 }
 
@@ -212,6 +226,12 @@ fn separation(
     }
 }
 
+fn separation_apply(mut boids: Query<(&mut Velocity, &Separation)>) {
+    for (mut vel, separtion) in boids.iter_mut() {
+        vel.0 += separtion.effect;
+    }
+}
+
 #[derive(Component, Reflect, Default)]
 pub struct Alignment {
     pub effect: Vec2,
@@ -221,7 +241,7 @@ fn alignment(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Boid>>,
     mut boids: Query<(&Transform, &Velocity, &mut Alignment)>,
-    other: Query<&Velocity, With<Boid>>,
+    other: Query<&Velocity, With<Alignment>>,
 ) {
     for (transform, vel, mut alignment) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
@@ -245,22 +265,18 @@ fn alignment(
     }
 }
 
+fn alignment_apply(mut boids: Query<(&mut Velocity, &Alignment)>) {
+    for (mut vel, alignment) in boids.iter_mut() {
+        vel.0 += alignment.effect;
+    }
+}
+
 fn step(
     settings: Res<BoidSettings>,
-    mut boids: Query<(
-        &mut Transform,
-        &mut Velocity,
-        &Coherence,
-        &Separation,
-        &Alignment,
-    )>,
+    mut boids: Query<(&mut Transform, &mut Velocity), With<Boid>>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut vel, coherence, separation, alignment) in boids.iter_mut() {
-        vel.0 += coherence.effect;
-        vel.0 += separation.effect;
-        vel.0 += alignment.effect;
-
+    for (mut transform, mut vel) in boids.iter_mut() {
         const CENTER_FORCE: f32 = 100.0;
         let pos = transform.translation.xy();
         if pos.x < -500.0 {
