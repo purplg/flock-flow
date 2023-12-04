@@ -37,7 +37,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
         local: Transform::from_xyz(
             rng.gen::<f32>() * 1000. - 500.,
             rng.gen::<f32>() * 600. - 300.,
-            0.0,
+            1.0,
         ),
         ..default()
     });
