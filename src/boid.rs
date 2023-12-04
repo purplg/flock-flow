@@ -73,7 +73,7 @@ struct BoidSettings {
 struct Boid;
 
 #[derive(Component, Default, Deref, DerefMut, Reflect)]
-struct Velocity(pub Vec2);
+pub struct Velocity(pub Vec2);
 
 fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
     events.send_batch(
@@ -148,7 +148,11 @@ fn spawn(
                     ..default()
                 });
             }
-            GameEvent::HurtNode(_, _) => {}
+            GameEvent::HurtNode {
+                entity: _,
+                amount: _,
+                velocity: _,
+            } => {}
         }
     }
 }
@@ -186,7 +190,7 @@ struct Separation {
 fn separation(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Boid>>,
-    mut boids: Query<(Entity, &Transform, &mut Separation), With<Boid>>,
+    mut boids: Query<(Entity, &Transform, &mut Separation)>,
 ) {
     for (this_entity, transform, mut separation) in boids.iter_mut() {
         let this_pos = transform.translation.xy();
@@ -209,14 +213,14 @@ fn separation(
 }
 
 #[derive(Component, Reflect, Default)]
-struct Alignment {
-    effect: Vec2,
+pub struct Alignment {
+    pub effect: Vec2,
 }
 
 fn alignment(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Boid>>,
-    mut boids: Query<(&Transform, &Velocity, &mut Alignment), With<Boid>>,
+    mut boids: Query<(&Transform, &Velocity, &mut Alignment)>,
     other: Query<&Velocity, With<Boid>>,
 ) {
     for (transform, vel, mut alignment) in boids.iter_mut() {
@@ -243,16 +247,13 @@ fn alignment(
 
 fn step(
     settings: Res<BoidSettings>,
-    mut boids: Query<
-        (
-            &mut Transform,
-            &mut Velocity,
-            &Coherence,
-            &Separation,
-            &Alignment,
-        ),
-        With<Boid>,
-    >,
+    mut boids: Query<(
+        &mut Transform,
+        &mut Velocity,
+        &Coherence,
+        &Separation,
+        &Alignment,
+    )>,
     time: Res<Time>,
 ) {
     for (mut transform, mut vel, coherence, separation, alignment) in boids.iter_mut() {
@@ -296,14 +297,18 @@ fn cooldown(
 
 fn hit(
     mut commands: Commands,
-    boids: Query<(Entity, &Transform), (With<Boid>, Without<HitCooldown>)>,
+    boids: Query<(Entity, &Transform, &Velocity), (With<Boid>, Without<HitCooldown>)>,
     healths: Query<(Entity, &Transform), With<Health>>,
     mut events: EventWriter<GameEvent>,
 ) {
-    for (boid_entity, boid) in boids.iter() {
+    for (boid_entity, boid, vel) in boids.iter() {
         for (health_entity, node) in healths.iter() {
             if boid.translation.distance_squared(node.translation) < 10.0 * 10.0 {
-                events.send(GameEvent::HurtNode(health_entity, 10));
+                events.send(GameEvent::HurtNode {
+                    entity: health_entity,
+                    amount: 10,
+                    velocity: -vel.0,
+                });
                 commands.entity(boid_entity).insert(HitCooldown(5.));
             }
         }

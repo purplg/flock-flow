@@ -5,7 +5,7 @@ mod node;
 mod player;
 mod rng;
 
-use bevy::{app::AppExit, log::LogPlugin, prelude::*};
+use bevy::{app::AppExit, prelude::*};
 
 struct CorePlugin;
 
@@ -26,7 +26,11 @@ impl Plugin for CorePlugin {
 #[derive(Debug, Event)]
 pub enum GameEvent {
     SpawnBoid(Vec2),
-    HurtNode(Entity, u32),
+    HurtNode {
+        entity: Entity,
+        amount: u32,
+        velocity: Vec2,
+    },
 }
 
 #[derive(Component)]
@@ -39,14 +43,19 @@ fn health(
 ) {
     for event in events.read() {
         match event {
-            GameEvent::HurtNode(entity, amount) => {
+            GameEvent::HurtNode {
+                entity,
+                amount,
+                velocity: _,
+            } => {
                 let Ok(mut health) = health.get_mut(*entity) else {
                     continue;
                 };
 
                 match health.0.checked_sub(*amount) {
                     Some(remaining) => health.0 = remaining,
-                    None => commands.entity(*entity).despawn(),
+                    None => {} // commands.entity(*entity).despawn()
+                               ,
                 }
             }
             GameEvent::SpawnBoid(_) => {}
