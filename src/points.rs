@@ -13,6 +13,7 @@ impl Plugin for PointsPlugin {
 #[derive(Debug, Event)]
 pub enum PointEvent {
     Add(u32),
+    #[allow(dead_code)]
     Remove(u32),
 }
 

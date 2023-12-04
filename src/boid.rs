@@ -24,9 +24,9 @@ impl Plugin for BoidPlugin {
             max_velocity: 200.0,
         });
         app.insert_resource(BoidDebugSettings {
-            show_cluster_range: false,
-            show_avoid_range: false,
-            show_direction: false,
+            cluster_range: false,
+            avoid_range: false,
+            direction: false,
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
@@ -53,9 +53,9 @@ impl Plugin for BoidPlugin {
 #[derive(Reflect, Resource, Default, InspectorOptions)]
 #[reflect(Resource)]
 struct BoidDebugSettings {
-    show_cluster_range: bool,
-    show_avoid_range: bool,
-    show_direction: bool,
+    cluster_range: bool,
+    avoid_range: bool,
+    direction: bool,
 }
 
 #[derive(Reflect, Resource, Default, InspectorOptions)]
@@ -93,7 +93,7 @@ fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
                     y: y * 600. - 300.,
                 })
             }),
-    )
+    );
 }
 
 fn input(
@@ -114,7 +114,7 @@ fn input(
                             y: y * 600. - 300.,
                         })
                     },
-                ))
+                ));
             }
             InputEvent::Schwack(schwack_pos) => {
                 for (pos, entity) in quadtree
@@ -175,15 +175,17 @@ fn coherence(
     quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<(&Transform, &mut Coherence)>,
 ) {
-    for (transform, mut coherence) in boids.iter_mut() {
+    for (transform, mut coherence) in &mut boids {
         let this_pos = transform.translation.xy();
 
         let nearby = quadtree.within_distance(this_pos, settings.visual_range);
         let count = nearby.len();
         coherence.effect = if count > 1 {
+            #[allow(clippy::cast_precision_loss)]
+            let count = (count - 1) as f32;
             let masses: Vec2 =
                 nearby.into_iter().map(|(pos, _entity)| pos).sum::<Vec2>() - this_pos;
-            ((masses / (count - 1) as f32) - this_pos) * settings.coherence
+            ((masses / count) - this_pos) * settings.coherence
         } else {
             Vec2::ZERO
         }
@@ -191,7 +193,7 @@ fn coherence(
 }
 
 fn coherence_apply(mut boids: Query<(&mut Velocity, &Coherence)>) {
-    for (mut vel, coherence) in boids.iter_mut() {
+    for (mut vel, coherence) in &mut boids {
         vel.0 += coherence.effect;
     }
 }
@@ -206,7 +208,7 @@ fn separation(
     quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<(Entity, &Transform, &mut Separation)>,
 ) {
-    for (this_entity, transform, mut separation) in boids.iter_mut() {
+    for (this_entity, transform, mut separation) in &mut boids {
         let this_pos = transform.translation.xy();
         let mut c = Vec2::ZERO;
 
@@ -227,7 +229,7 @@ fn separation(
 }
 
 fn separation_apply(mut boids: Query<(&mut Velocity, &Separation)>) {
-    for (mut vel, separtion) in boids.iter_mut() {
+    for (mut vel, separtion) in &mut boids {
         vel.0 += separtion.effect;
     }
 }
@@ -243,7 +245,7 @@ fn alignment(
     mut boids: Query<(&Transform, &Velocity, &mut Alignment)>,
     other: Query<&Velocity, With<Alignment>>,
 ) {
-    for (transform, vel, mut alignment) in boids.iter_mut() {
+    for (transform, vel, mut alignment) in &mut boids {
         let this_pos = transform.translation.xy();
         let mut velocities = -vel.0;
         let mut count = -1;
@@ -258,7 +260,9 @@ fn alignment(
         }
 
         alignment.effect = if count > 0 {
-            (velocities / count as f32) * settings.alignment
+            #[allow(clippy::cast_precision_loss)]
+            let count = count as f32;
+            (velocities / count) * settings.alignment
         } else {
             Vec2::ZERO
         }
@@ -266,7 +270,7 @@ fn alignment(
 }
 
 fn alignment_apply(mut boids: Query<(&mut Velocity, &Alignment)>) {
-    for (mut vel, alignment) in boids.iter_mut() {
+    for (mut vel, alignment) in &mut boids {
         vel.0 += alignment.effect;
     }
 }
@@ -276,7 +280,7 @@ fn step(
     mut boids: Query<(&mut Transform, &mut Velocity), With<Boid>>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut vel) in boids.iter_mut() {
+    for (mut transform, mut vel) in &mut boids {
         const CENTER_FORCE: f32 = 100.0;
         let pos = transform.translation.xy();
         if pos.x < -500.0 {
@@ -304,7 +308,7 @@ fn cooldown(
     mut cooldown: Query<(Entity, &mut HitCooldown)>,
     time: Res<Time>,
 ) {
-    for (entity, mut cooldown) in cooldown.iter_mut() {
+    for (entity, mut cooldown) in &mut cooldown {
         cooldown.0 -= time.delta_seconds();
         if cooldown.0 < 0.0 {
             commands.entity(entity).remove::<HitCooldown>();
@@ -319,21 +323,21 @@ fn gizmo(
     boids: Query<(&Transform, &Velocity), With<Boid>>,
 ) {
     for (transform, velocity) in boids.iter() {
-        if debug_settings.show_cluster_range {
+        if debug_settings.cluster_range {
             gizmos.circle_2d(
                 transform.translation.xy(),
                 settings.visual_range,
                 Color::rgba(1.0, 0.0, 0.0, 0.1),
             );
         }
-        if debug_settings.show_avoid_range {
+        if debug_settings.avoid_range {
             gizmos.circle_2d(
                 transform.translation.xy(),
                 settings.avoid_range,
                 Color::rgba(1.0, 1.0, 0.0, 0.1),
             );
         }
-        if debug_settings.show_direction {
+        if debug_settings.direction {
             gizmos.line_2d(
                 transform.translation.xy(),
                 transform.translation.xy() + velocity.0.normalize_or_zero() * 10.0,

@@ -19,6 +19,6 @@ fn spawn(mut commands: Commands) {
     entity.insert(PlayerCamera);
 }
 
-fn gizmo(mut gizmos: Gizmos, cameras: Query<&Camera2d>) {
+fn gizmo(mut gizmos: Gizmos) {
     gizmos.rect_2d(Vec2::ZERO, 0.0, Vec2::new(1000.0, 600.0), Color::BLUE);
 }

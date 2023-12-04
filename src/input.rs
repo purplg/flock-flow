@@ -32,7 +32,7 @@ fn mouse_button(
     let Some(click_position) = windows
         .get_single()
         .ok()
-        .and_then(|window| window.cursor_position())
+        .and_then(bevy::prelude::Window::cursor_position)
         .and_then(|cursor_position| camera.viewport_to_world_2d(camera_trans, cursor_position))
     else {
         return;

@@ -61,8 +61,7 @@ fn movement(
         .read()
         .map(|event| match event {
             InputEvent::Move(direction) => *direction,
-            InputEvent::Schwack(_) => Vec2::ZERO,
-            InputEvent::SpawnBoid => Vec2::ZERO,
+            InputEvent::SpawnBoid | InputEvent::Schwack(_) => Vec2::ZERO,
         })
         .sum::<Vec2>();
 

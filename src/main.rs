@@ -1,3 +1,7 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::needless_pass_by_value)]
+
 mod boid;
 mod camera;
 mod input;
@@ -77,6 +81,7 @@ fn main() {
     app.add_plugins(CorePlugin);
 
     #[cfg(debug_assertions)]
+    #[allow(clippy::items_after_statements)]
     {
         use bevy_editor_pls::{EditorPlugin, EditorWindowPlacement};
         app.add_plugins(EditorPlugin {
