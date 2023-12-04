@@ -4,8 +4,8 @@
 
 mod boid;
 mod camera;
+mod collectible;
 mod input;
-mod node;
 mod player;
 mod points;
 mod rng;
@@ -25,7 +25,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(rng::RngPlugin);
         app.add_plugins(camera::CameraPlugin);
         app.add_plugins(boid::BoidPlugin);
-        app.add_plugins(node::NodePlugin);
+        app.add_plugins(collectible::CollectiblePlugin);
         app.add_systems(Update, quit);
         app.add_systems(Update, health);
     }

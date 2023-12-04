@@ -5,7 +5,7 @@ use rand::Rng;
 use crate::{
     boid::{Alignment, Boid, Velocity},
     input::InputEvent,
-    node::Collectible,
+    collectible::Collectible,
     rng::RngSource,
     track::Tracked,
     GameEvent, Health,

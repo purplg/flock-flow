@@ -8,9 +8,9 @@ pub struct Collectible {
     pub value: u32,
 }
 
-pub struct NodePlugin;
+pub struct CollectiblePlugin;
 
-impl Plugin for NodePlugin {
+impl Plugin for CollectiblePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, startup);
         app.add_systems(Update, collect.run_if(on_event::<GameEvent>()));
@@ -20,7 +20,7 @@ impl Plugin for NodePlugin {
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResMut<RngSource>) {
     let rng = &mut **rng;
     let mut entity = commands.spawn_empty();
-    entity.insert(Name::new("Node"));
+    entity.insert(Name::new("Collectible"));
     entity.insert(SpriteBundle {
         texture: asset_server.load("node.png"),
         ..default()
