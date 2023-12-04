@@ -4,7 +4,7 @@ use bevy_spatial::{kdtree::KDTree2, AutomaticUpdate, SpatialAccess, SpatialStruc
 use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
-use crate::{input::InputEvent, rng::RngSource, GameEvent, Health};
+use crate::{input::InputEvent, player::Player, rng::RngSource, GameEvent, Health};
 
 pub struct BoidPlugin;
 
@@ -108,10 +108,14 @@ fn input(
         match event {
             InputEvent::SpawnBoid => {
                 let rng = &mut **rng;
-                game_events.send(GameEvent::SpawnBoid(Vec2 {
-                    x: rng.gen::<f32>() * 1000. - 500.,
-                    y: rng.gen::<f32>() * 600. - 300.,
-                }));
+                game_events.send_batch(rng.sample_iter(Standard).take(100 * 2).tuples().map(
+                    |(x, y): (f32, f32)| {
+                        GameEvent::SpawnBoid(Vec2 {
+                            x: x * 1000. - 500.,
+                            y: y * 600. - 300.,
+                        })
+                    },
+                ))
             }
             InputEvent::Schwack(schwack_pos) => {
                 for (pos, mut vel) in boids

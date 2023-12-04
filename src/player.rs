@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Component)]
-struct Player;
+pub struct Player;
 
 pub struct PlayerPlugin;
 
