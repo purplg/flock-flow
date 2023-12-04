@@ -4,7 +4,7 @@ use bevy_spatial::{kdtree::KDTree2, AutomaticUpdate, SpatialAccess, SpatialStruc
 use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
-use crate::{input::InputEvent, player::Player, rng::RngSource, GameEvent, Health};
+use crate::{input::InputEvent, player::Player, rng::RngSource, GameEvent};
 
 pub struct BoidPlugin;
 
@@ -46,7 +46,6 @@ impl Plugin for BoidPlugin {
             )
                 .chain(),
         );
-        app.add_systems(Update, hit);
         app.add_systems(Update, cooldown);
         app.add_systems(Update, gizmo);
     }
@@ -142,33 +141,26 @@ fn spawn(
     mut events: EventReader<GameEvent>,
 ) {
     for event in events.read() {
-        match event {
-            GameEvent::SpawnBoid(pos) => {
-                let rng = &mut **rng;
-                let mut entity = commands.spawn_empty();
-                entity.insert(Name::new("Boid"));
-                entity.insert(SpriteBundle {
-                    texture: asset_server.load("boid.png"),
-                    ..default()
-                });
-                entity.insert(Boid);
-                let x = rng.gen::<f32>() * 200. - 100.;
-                let y = rng.gen::<f32>() * 200. - 100.;
-                let vel = Vec2 { x, y } * 20.;
-                entity.insert(Velocity(vel));
-                entity.insert(Coherence::default());
-                entity.insert(Separation::default());
-                entity.insert(Alignment::default());
-                entity.insert(TransformBundle {
-                    local: Transform::from_xyz(pos.x, pos.y, 0.0),
-                    ..default()
-                });
-            }
-            GameEvent::HurtNode {
-                entity: _,
-                amount: _,
-                velocity: _,
-            } => {}
+        if let GameEvent::SpawnBoid(pos) = event {
+            let rng = &mut **rng;
+            let mut entity = commands.spawn_empty();
+            entity.insert(Name::new("Boid"));
+            entity.insert(SpriteBundle {
+                texture: asset_server.load("boid.png"),
+                ..default()
+            });
+            entity.insert(Boid);
+            let x = rng.gen::<f32>() * 200. - 100.;
+            let y = rng.gen::<f32>() * 200. - 100.;
+            let vel = Vec2 { x, y } * 20.;
+            entity.insert(Velocity(vel));
+            entity.insert(Coherence::default());
+            entity.insert(Separation::default());
+            entity.insert(Alignment::default());
+            entity.insert(TransformBundle {
+                local: Transform::from_xyz(pos.x, pos.y, 0.0),
+                ..default()
+            });
         }
     }
 }
@@ -316,26 +308,6 @@ fn cooldown(
         cooldown.0 -= time.delta_seconds();
         if cooldown.0 < 0.0 {
             commands.entity(entity).remove::<HitCooldown>();
-        }
-    }
-}
-
-fn hit(
-    mut commands: Commands,
-    boids: Query<(Entity, &Transform, &Velocity), (With<Boid>, Without<HitCooldown>)>,
-    healths: Query<(Entity, &Transform), With<Health>>,
-    mut events: EventWriter<GameEvent>,
-) {
-    for (boid_entity, boid, vel) in boids.iter() {
-        for (health_entity, node) in healths.iter() {
-            if boid.translation.distance_squared(node.translation) < 10.0 * 10.0 {
-                events.send(GameEvent::HurtNode {
-                    entity: health_entity,
-                    amount: 10,
-                    velocity: -vel.0,
-                });
-                commands.entity(boid_entity).insert(HitCooldown(5.));
-            }
         }
     }
 }

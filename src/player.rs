@@ -2,10 +2,11 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    boid::{Alignment, Boid, Coherence, Separation, Velocity},
+    boid::{Alignment, Boid, Velocity},
     input::InputEvent,
+    node::Collectible,
     rng::RngSource,
-    Health,
+    GameEvent, Health,
 };
 
 #[derive(Component)]
@@ -17,6 +18,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, startup);
         app.add_systems(Update, movement);
+        app.add_systems(Update, collect);
     }
 }
 
@@ -65,4 +67,18 @@ fn movement(
         vel.0 += movement * 50.;
     }
     vel.0 = vel.0.lerp(Vec2::ZERO, time.delta_seconds() * 10.0);
+}
+
+fn collect(
+    boids: Query<&Transform, With<Player>>,
+    nodes: Query<(Entity, &Transform), With<Collectible>>,
+    mut events: EventWriter<GameEvent>,
+) {
+    for boid in boids.iter() {
+        for (node_entity, node_trans) in nodes.iter() {
+            if boid.translation.distance_squared(node_trans.translation) < 10.0 * 10.0 {
+                events.send(GameEvent::Collect(node_entity));
+            }
+        }
+    }
 }

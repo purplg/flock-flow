@@ -1,16 +1,19 @@
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{rng::RngSource, Health};
+use crate::{points::PointEvent, rng::RngSource, GameEvent};
 
 #[derive(Component)]
-struct Node;
+pub struct Collectible {
+    pub value: u32,
+}
 
 pub struct NodePlugin;
 
 impl Plugin for NodePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, startup);
+        app.add_systems(Update, collect.run_if(on_event::<GameEvent>()));
     }
 }
 
@@ -22,8 +25,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
         texture: asset_server.load("node.png"),
         ..default()
     });
-    entity.insert(Node);
-    entity.insert(Health(100));
+    entity.insert(Collectible { value: 1 });
     entity.insert(TransformBundle {
         local: Transform::from_xyz(
             rng.gen::<f32>() * 1000. - 500.,
@@ -32,4 +34,23 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
         ),
         ..default()
     });
+}
+
+fn collect(
+    mut commands: Commands,
+    collectibles: Query<(Entity, &Collectible)>,
+    mut reader: EventReader<GameEvent>,
+    mut point_event: EventWriter<PointEvent>,
+) {
+    for (entity, collectible) in collectibles.iter() {
+        for event in reader.read() {
+            if let GameEvent::Collect(event_entity) = event {
+                if entity == *event_entity {
+                    commands.entity(entity).despawn();
+                    point_event.send(PointEvent::Add(collectible.value));
+                    break;
+                }
+            }
+        }
+    }
 }

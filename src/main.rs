@@ -3,6 +3,7 @@ mod camera;
 mod input;
 mod node;
 mod player;
+mod points;
 mod rng;
 
 use bevy::{app::AppExit, prelude::*};
@@ -14,6 +15,7 @@ impl Plugin for CorePlugin {
         app.add_event::<GameEvent>();
         app.add_plugins(input::InputPlugin);
         app.add_plugins(player::PlayerPlugin);
+        app.add_plugins(points::PointsPlugin);
         app.add_plugins(rng::RngPlugin);
         app.add_plugins(camera::CameraPlugin);
         app.add_plugins(boid::BoidPlugin);
@@ -31,6 +33,7 @@ pub enum GameEvent {
         amount: u32,
         velocity: Vec2,
     },
+    Collect(Entity),
 }
 
 #[derive(Component)]
@@ -42,23 +45,20 @@ fn health(
     mut health: Query<&mut Health>,
 ) {
     for event in events.read() {
-        match event {
-            GameEvent::HurtNode {
-                entity,
-                amount,
-                velocity: _,
-            } => {
-                let Ok(mut health) = health.get_mut(*entity) else {
-                    continue;
-                };
+        if let GameEvent::HurtNode {
+            entity,
+            amount,
+            velocity: _,
+        } = event
+        {
+            let Ok(mut health) = health.get_mut(*entity) else {
+                continue;
+            };
 
-                match health.0.checked_sub(*amount) {
-                    Some(remaining) => health.0 = remaining,
-                    None => {} // commands.entity(*entity).despawn()
-                               ,
-                }
+            match health.0.checked_sub(*amount) {
+                Some(remaining) => health.0 = remaining,
+                None => commands.entity(*entity).despawn(),
             }
-            GameEvent::SpawnBoid(_) => {}
         }
     }
 }
