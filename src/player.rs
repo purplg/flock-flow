@@ -91,7 +91,7 @@ fn collect(
                 commands.entity(entity).despawn();
                 point_event.send(PointEvent::Add(collectible.value));
                 collectible_event.send(collectible::Event::Collect);
-                break;
+                collectible_event.send(collectible::Event::Spawn);
             }
         }
     }
