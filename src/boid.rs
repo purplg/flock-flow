@@ -1,10 +1,14 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
-use crate::{input::InputEvent, player::Player, rng::RngSource, track::Tracked, GameEvent};
+use crate::{
+    collectible, input::InputEvent, player::Player, rng::RngSource, track::Tracked, GameEvent,
+};
 
 pub struct BoidPlugin;
 
@@ -30,7 +34,7 @@ impl Plugin for BoidPlugin {
         });
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
-        app.add_systems(Startup, startup);
+        app.add_systems(Update, collect.run_if(on_event::<collectible::Event>()));
         app.add_systems(Update, input);
         app.add_systems(Update, spawn);
         app.add_systems(
@@ -81,21 +85,6 @@ pub struct Boid;
 #[derive(Component, Default, Deref, DerefMut, Reflect)]
 pub struct Velocity(pub Vec2);
 
-fn startup(mut rng: ResMut<RngSource>, mut events: EventWriter<GameEvent>) {
-    events.send_batch(
-        (&mut **rng)
-            .sample_iter(Standard)
-            .take(1000 * 2)
-            .tuples()
-            .map(|(x, y): (f32, f32)| {
-                GameEvent::SpawnBoid(Vec2 {
-                    x: x * 1000. - 500.,
-                    y: y * 600. - 300.,
-                })
-            }),
-    );
-}
-
 fn input(
     mut rng: ResMut<RngSource>,
     mut input_events: EventReader<InputEvent>,
@@ -130,6 +119,29 @@ fn input(
             }
             InputEvent::Move(_) => {}
         }
+    }
+}
+
+fn collect(
+    mut rng: ResMut<RngSource>,
+    mut collectible_events: EventReader<collectible::Event>,
+    mut game_events: EventWriter<GameEvent>,
+) {
+    for _ in collectible_events
+        .read()
+        .filter(|event| matches!(event, collectible::Event::Collect))
+    {
+        game_events.send_batch(
+            (&mut **rng)
+                .sample_iter(Standard)
+                .take(100)
+                .map(|angle: f32| angle * PI * 2.0)
+                .map(|angle: f32| (angle.cos(), angle.sin()))
+                .map(|(x, y): (f32, f32)| {
+                    let pos = Vec2 { x, y } * 1000.;
+                    GameEvent::SpawnBoid(pos)
+                }),
+        );
     }
 }
 

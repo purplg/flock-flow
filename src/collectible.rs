@@ -2,9 +2,11 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{rng::RngSource, track::Tracked};
+
 #[derive(Copy, Clone, Debug, Event)]
 pub enum Event {
     Spawn,
+    Collect,
 }
 
 #[derive(Component)]
@@ -13,7 +15,7 @@ pub struct Collectible {
 }
 
 fn setup(mut writer: EventWriter<Event>) {
-    writer.send_batch([Event::Spawn].repeat(100));
+    writer.send_batch([Event::Spawn].repeat(1));
 }
 
 fn spawn(

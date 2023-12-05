@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     boid::{Alignment, Boid, Velocity},
-    collectible::Collectible,
+    collectible::{self, Collectible},
     input::InputEvent,
     points::PointEvent,
     rng::RngSource,
@@ -78,6 +78,7 @@ fn collect(
     boids: Query<&Transform, With<Player>>,
     collectibles: Query<(Entity, &Collectible)>,
     mut point_event: EventWriter<PointEvent>,
+    mut collectible_event: EventWriter<collectible::Event>,
 ) {
     for player in boids.iter() {
         let pos = player.translation.xy();
@@ -89,6 +90,7 @@ fn collect(
             if let Ok((entity, collectible)) = collectibles.get(entity) {
                 commands.entity(entity).despawn();
                 point_event.send(PointEvent::Add(collectible.value));
+                collectible_event.send(collectible::Event::Collect);
                 break;
             }
         }
