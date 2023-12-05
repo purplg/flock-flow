@@ -11,7 +11,7 @@ use crate::{
     points::PointEvent,
     rng::RngSource,
     track::Tracked,
-    GameEvent, Health,
+    GameEvent,
 };
 
 #[derive(Component)]
@@ -41,7 +41,6 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
     });
     entity.insert(Player);
     entity.insert(Tracked);
-    entity.insert(Health(100));
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
     entity.insert(TransformBundle {

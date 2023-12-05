@@ -12,9 +12,6 @@ mod rng;
 mod track;
 
 use bevy::{app::AppExit, prelude::*};
-use rand::{distributions::Standard, Rng};
-use rng::RngSource;
-use std::f32::consts::PI;
 
 struct CorePlugin;
 
@@ -30,7 +27,6 @@ impl Plugin for CorePlugin {
         app.add_plugins(boid::BoidPlugin);
         app.add_plugins(collectible::Plugin);
         app.add_systems(Update, quit);
-        app.add_systems(Update, health);
         app.add_systems(Update, waves);
     }
 }
@@ -38,38 +34,6 @@ impl Plugin for CorePlugin {
 #[derive(Debug, Event)]
 pub enum GameEvent {
     NextWave,
-    HurtNode {
-        entity: Entity,
-        amount: u32,
-        velocity: Vec2,
-    },
-}
-
-#[derive(Component)]
-pub struct Health(pub u32);
-
-fn health(
-    mut commands: Commands,
-    mut events: EventReader<GameEvent>,
-    mut health: Query<&mut Health>,
-) {
-    for event in events.read() {
-        if let GameEvent::HurtNode {
-            entity,
-            amount,
-            velocity: _,
-        } = event
-        {
-            let Ok(mut health) = health.get_mut(*entity) else {
-                continue;
-            };
-
-            match health.0.checked_sub(*amount) {
-                Some(remaining) => health.0 = remaining,
-                None => commands.entity(*entity).despawn(),
-            }
-        }
-    }
 }
 
 fn main() {
@@ -114,11 +78,6 @@ fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::
                 boid_events.send_batch([boid::Event::SpawnBoi].repeat(90));
                 boid_events.send_batch([boid::Event::SpawnCalmBoi].repeat(10));
             }
-            GameEvent::HurtNode {
-                entity: _,
-                amount: _,
-                velocity: _,
-            } => {}
         }
     }
 }
