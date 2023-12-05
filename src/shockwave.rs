@@ -10,14 +10,25 @@ pub struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<Event>();
         app.add_systems(Update, avoid);
         app.add_systems(Update, expiration);
+        app.add_systems(Update, spawn.run_if(on_event::<Event>()));
         app.add_systems(Update, gizmo);
     }
 }
 
+#[derive(Debug, Event)]
+pub enum Event {
+    Spawn {
+        position: Vec2,
+        radius: f32,
+        duration: Duration,
+    },
+}
+
 #[derive(Component)]
-pub struct Shockwave {
+struct Shockwave {
     duration: f32,
     remaining: f32,
     max_radius: f32,
@@ -25,12 +36,31 @@ pub struct Shockwave {
 }
 
 impl Shockwave {
-    pub fn new(duration: Duration, radius: f32) -> Self {
+    fn new(duration: Duration, radius: f32) -> Self {
         Self {
             duration: duration.as_secs_f32(),
             remaining: duration.as_secs_f32(),
             max_radius: radius,
             active_radius: 0.0,
+        }
+    }
+}
+
+fn spawn(mut commands: Commands, mut events: EventReader<Event>) {
+    for event in events.read() {
+        match event {
+            Event::Spawn {
+                position,
+                radius,
+                duration,
+            } => {
+                let mut entity = commands.spawn_empty();
+                entity.insert(Name::new("Shockwave"));
+                entity.insert(Shockwave::new(*duration, *radius));
+                entity.insert(TransformBundle::from_transform(
+                    Transform::from_translation(position.extend(0.0)),
+                ));
+            }
         }
     }
 }
@@ -45,7 +75,7 @@ fn expiration(
         let progress = shockwave.remaining / shockwave.duration;
         shockwave.active_radius = shockwave.max_radius.lerp(&32.0, &progress.quadratic_in());
         if shockwave.remaining <= 0.0 {
-            commands.entity(entity).remove::<Shockwave>();
+            commands.entity(entity).despawn();
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
@@ -11,6 +11,7 @@ use crate::{
     input::InputEvent,
     points::PointEvent,
     rng::RngSource,
+    shockwave,
     track::Tracked,
     GameEvent,
 };
@@ -56,16 +57,26 @@ fn startup(
     entity.insert(Tracked);
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
-    entity.insert(Boost::default());
+    entity.insert(Boost::new(3.0));
     entity.insert(TransformBundle {
         local: Transform::from_translation(pos),
         ..default()
     });
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Reflect)]
 struct Boost {
     cooldown: f32,
+    multiplier: f32,
+}
+
+impl Boost {
+    pub fn new(multiplier: f32) -> Self {
+        Self {
+            cooldown: 0.0,
+            multiplier,
+        }
+    }
 }
 
 fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
@@ -77,12 +88,13 @@ fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
 }
 
 fn speed(
-    mut player: Query<(&mut Player, &mut Boost)>,
+    mut player: Query<(&mut Player, &Transform, &mut Boost)>,
     mut input: EventReader<InputEvent>,
+    mut shockwave_events: EventWriter<shockwave::Event>,
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
-    for (mut player, mut boost) in player.iter_mut() {
+    for (mut player, transform, mut boost) in player.iter_mut() {
         player.target_speed = player
             .target_speed
             .lerp(&settings.max_velocity, &time.delta_seconds());
@@ -91,7 +103,12 @@ fn speed(
             if let InputEvent::Boost = event {
                 if boost.cooldown <= 0.0 {
                     boost.cooldown = 1.0;
-                    player.target_speed = settings.max_velocity * 2.0;
+                    player.target_speed = settings.max_velocity * boost.multiplier;
+                    shockwave_events.send(shockwave::Event::Spawn {
+                        position: transform.translation.xy(),
+                        radius: 100.,
+                        duration: Duration::from_secs_f32(0.5),
+                    });
                 }
             }
         }

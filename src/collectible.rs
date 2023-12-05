@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{rng::RngSource, shockwave::Shockwave, track::Tracked};
+use crate::{rng::RngSource, shockwave, track::Tracked};
 
 pub struct Plugin;
 
@@ -36,6 +36,7 @@ fn events(
     asset_server: Res<AssetServer>,
     mut rng: ResMut<RngSource>,
     mut reader: EventReader<Event>,
+    mut shockwave_events: EventWriter<shockwave::Event>,
     mut collectibles: Query<&mut Transform, With<Collectible>>,
 ) {
     for event in reader.read() {
@@ -62,14 +63,19 @@ fn events(
             }
             Event::Collect(entity) => {
                 if let Ok(mut trans) = collectibles.get_mut(*entity) {
-                    let mut entity = commands.entity(*entity);
-                    entity.insert(Cooldown(1.));
-                    entity.insert(Shockwave::new(Duration::from_secs_f32(1.), 200.));
                     let pos = Vec2 {
                         x: rng.gen::<f32>() * 1000. - 500.,
                         y: rng.gen::<f32>() * 600. - 300.,
                     };
                     trans.translation = pos.extend(0.0);
+                    let mut entity = commands.entity(*entity);
+                    entity.insert(Cooldown(1.));
+
+                    shockwave_events.send(shockwave::Event::Spawn {
+                        position: trans.translation.xy(),
+                        radius: 200.,
+                        duration: Duration::from_secs_f32(1.),
+                    });
                 }
             }
         }
