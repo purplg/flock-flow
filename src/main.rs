@@ -9,6 +9,7 @@ mod input;
 mod player;
 mod points;
 mod rng;
+mod shockwave;
 mod track;
 
 use bevy::{app::AppExit, prelude::*};
@@ -26,6 +27,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(camera::CameraPlugin);
         app.add_plugins(boid::BoidPlugin);
         app.add_plugins(collectible::Plugin);
+        app.add_plugins(shockwave::Plugin);
         app.add_systems(Update, quit);
         app.add_systems(Update, waves);
     }

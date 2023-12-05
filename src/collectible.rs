@@ -1,7 +1,9 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{rng::RngSource, track::Tracked};
+use crate::{rng::RngSource, shockwave::Shockwave, track::Tracked};
 
 pub struct Plugin;
 
@@ -55,10 +57,14 @@ fn events(
                     local: Transform::from_translation(pos.extend(0.0)),
                     ..default()
                 });
+
+                entity.insert(Cooldown(1.));
             }
             Event::Collect(entity) => {
                 if let Ok(mut trans) = collectibles.get_mut(*entity) {
-                    commands.entity(*entity).insert(Cooldown(1.));
+                    let mut entity = commands.entity(*entity);
+                    entity.insert(Cooldown(1.));
+                    entity.insert(Shockwave::new(Duration::from_secs_f32(1.), 200.));
                     let pos = Vec2 {
                         x: rng.gen::<f32>() * 1000. - 500.,
                         y: rng.gen::<f32>() * 600. - 300.,

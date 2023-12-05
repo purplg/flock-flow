@@ -2334,6 +2334,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "interpolation"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9c13ae9d91148fcb4aab6654c4c2a7d02a15395ea9e23f65170f175f8b269ce"
+
+[[package]]
 name = "io-kit-sys"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3540,6 +3546,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_editor_pls",
  "bevy_spatial",
+ "interpolation",
  "rand",
  "rand_chacha",
 ]
