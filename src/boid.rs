@@ -3,7 +3,6 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
-use itertools::Itertools;
 use rand::{distributions::Standard, Rng};
 
 use crate::{
