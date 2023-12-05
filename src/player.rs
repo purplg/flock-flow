@@ -93,7 +93,7 @@ fn collect(
     for player in boids.iter() {
         let pos = player.translation.xy();
         for entity in quadtree
-            .within_distance(pos, 10.0)
+            .within_distance(pos, 32.0)
             .into_iter()
             .filter_map(|(_, entity)| entity)
         {
