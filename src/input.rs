@@ -6,7 +6,7 @@ pub struct InputPlugin;
 
 #[derive(Debug, Event)]
 pub enum InputEvent {
-    Move(Vec2),
+    Turn(f32),
     Schwack(Vec2),
     SpawnBoid,
 }
@@ -49,15 +49,15 @@ fn keyboard(keys: Res<Input<KeyCode>>, mut event_writer: EventWriter<InputEvent>
     if keys.just_pressed(KeyCode::Space) {
         event_writer.send(InputEvent::SpawnBoid);
     }
-    if keys.pressed(KeyCode::W) {
-        event_writer.send(InputEvent::Move(Vec2::Y));
-    } else if keys.pressed(KeyCode::S) {
-        event_writer.send(InputEvent::Move(-Vec2::Y));
-    }
+    // if keys.pressed(KeyCode::W) {
+    //     event_writer.send(InputEvent::Accelerate(1.0));
+    // } else if keys.pressed(KeyCode::S) {
+    //     event_writer.send(InputEvent::Accelerate(-1.0));
+    // }
 
     if keys.pressed(KeyCode::D) {
-        event_writer.send(InputEvent::Move(Vec2::X));
+        event_writer.send(InputEvent::Turn(-1.0));
     } else if keys.pressed(KeyCode::A) {
-        event_writer.send(InputEvent::Move(-Vec2::X));
+        event_writer.send(InputEvent::Turn(1.0));
     }
 }

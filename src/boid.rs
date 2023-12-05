@@ -65,20 +65,20 @@ struct BoidDebugSettings {
 
 #[derive(Reflect, Resource, Default, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
-struct BoidSettings {
+pub struct BoidSettings {
     #[inspector(min = 0.0, speed = 0.001)]
-    coherence: f32,
+    pub coherence: f32,
     #[inspector(min = 0.0, speed = 0.001)]
-    separation: f32,
+    pub separation: f32,
     #[inspector(min = 0.0, speed = 0.001)]
-    alignment: f32,
+    pub alignment: f32,
     #[inspector(min = 0.0)]
-    visual_range: f32,
+    pub visual_range: f32,
     #[inspector(min = 0.0)]
-    avoid_range: f32,
+    pub avoid_range: f32,
     #[inspector(min = 0.0)]
-    max_velocity: f32,
-    bounds: Rect,
+    pub max_velocity: f32,
+    pub bounds: Rect,
 }
 
 #[derive(Component)]
@@ -121,7 +121,7 @@ fn input(
                     vel.0 += (pos - *schwack_pos) * 10.;
                 }
             }
-            InputEvent::Move(_) => {}
+            InputEvent::Turn(_) => {}
         }
     }
 }
@@ -305,7 +305,7 @@ fn step(
             vel.0 = vel.clamp_length_max(settings.max_velocity);
         }
         transform.translation += vel.extend(0.0) * time.delta_seconds();
-        transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x));
+        transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
     }
 }
 
