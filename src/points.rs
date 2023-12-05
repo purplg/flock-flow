@@ -18,7 +18,7 @@ pub enum PointEvent {
 }
 
 #[derive(Resource)]
-struct Points(pub u32);
+pub struct Points(pub u32);
 
 fn collect(mut read: EventReader<PointEvent>, mut points: ResMut<Points>) {
     for event in read.read() {
@@ -26,6 +26,5 @@ fn collect(mut read: EventReader<PointEvent>, mut points: ResMut<Points>) {
             PointEvent::Add(amount) => points.0 += amount,
             PointEvent::Remove(amount) => points.0 -= amount,
         }
-        println!("points: {:?}", points.0);
     }
 }
