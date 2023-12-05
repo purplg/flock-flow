@@ -11,14 +11,10 @@ mod points;
 mod rng;
 mod track;
 
-use std::f32::consts::PI;
-
 use bevy::{app::AppExit, prelude::*};
-use bevy_spatial::kdtree::KDTree2;
-use collectible::Collectible;
 use rand::{distributions::Standard, Rng};
 use rng::RngSource;
-use track::Tracked;
+use std::f32::consts::PI;
 
 struct CorePlugin;
 
@@ -111,27 +107,12 @@ fn quit(keys: Res<Input<KeyCode>>, mut app_exit_events: ResMut<Events<AppExit>>)
     }
 }
 
-fn waves(
-    mut events: EventReader<GameEvent>,
-    mut boid_events: EventWriter<boid::Event>,
-    mut collectible_events: EventWriter<collectible::Event>,
-    mut rng: ResMut<RngSource>,
-) {
+fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::Event>) {
     for event in events.read() {
         match event {
             GameEvent::NextWave => {
-                boid_events.send_batch(
-                    (&mut **rng)
-                        .sample_iter(Standard)
-                        .take(99)
-                        .map(|sample: f32| sample * PI * 2.0)
-                        .map(|angle: f32| (angle.cos(), angle.sin()))
-                        .map(|(x, y): (f32, f32)| {
-                            let pos = Vec2 { x, y } * 1000.;
-                            boid::Event::SpawnBoi(pos)
-                        }),
-                );
-                boid_events.send(boid::Event::SpawnCalmBoi);
+                boid_events.send_batch([boid::Event::SpawnBoi].repeat(90));
+                boid_events.send_batch([boid::Event::SpawnCalmBoi].repeat(10));
             }
             GameEvent::HurtNode {
                 entity: _,

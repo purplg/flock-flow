@@ -2,6 +2,7 @@ use super::{BoidBundle, Velocity};
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
+use rand::Rng;
 
 use crate::{input::InputEvent, rng::RngSource, track::Tracked, GameEvent};
 
@@ -52,7 +53,12 @@ fn spawn(
     mut events: EventReader<super::Event>,
 ) {
     for event in events.read() {
-        if let super::Event::SpawnBoi(pos) = event {
+        if let super::Event::SpawnBoi = event {
+            let angle: f32 = rng.gen();
+            let pos = Vec2 {
+                x: angle.cos(),
+                y: angle.sin(),
+            } * 1000.;
             let mut entity = commands.spawn_empty();
             entity.insert(Name::new("Boi"));
             entity.insert(Boi);
@@ -60,7 +66,7 @@ fn spawn(
                 texture: asset_server.load("boid.png"),
                 ..default()
             });
-            entity.insert(BoidBundle::new(*pos, &mut **rng));
+            entity.insert(BoidBundle::new(pos, &mut **rng));
         }
     }
 }

@@ -8,7 +8,9 @@ use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorO
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::{Rng, RngCore};
 
-use crate::track::Tracked;
+use crate::{collectible::Collectible, track::Tracked};
+
+use self::calmboi::Home;
 
 pub struct BoidPlugin;
 
@@ -29,24 +31,24 @@ impl Plugin for BoidPlugin {
             max_velocity: 200.0,
             bounds: Rect::new(-500., -300., 500., 300.),
             centering_force: 20.,
+            home_range: 200.,
+            home_effect: 2.,
         });
         app.insert_resource(BoidDebugSettings {
             cluster_range: false,
             avoid_range: false,
+            home_range: true,
             direction: false,
         });
         app.add_systems(
             Update,
             (
-                (
-                    (coherence, coherence_apply).chain(),
-                    (separation, separation_apply).chain(),
-                    (alignment, alignment_apply).chain(),
-                ),
-                step,
-            )
-                .chain(),
+                (coherence, coherence_apply).chain(),
+                (separation, separation_apply).chain(),
+                (alignment, alignment_apply).chain(),
+            ),
         );
+        app.add_systems(PostUpdate, step);
         app.add_systems(Update, gizmo);
         app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
         app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
@@ -55,9 +57,9 @@ impl Plugin for BoidPlugin {
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Copy, Clone, Debug, Event)]
 pub enum Event {
-    SpawnBoi(Vec2),
+    SpawnBoi,
     SpawnCalmBoi,
 }
 
@@ -66,6 +68,7 @@ pub enum Event {
 struct BoidDebugSettings {
     cluster_range: bool,
     avoid_range: bool,
+    home_range: bool,
     direction: bool,
 }
 
@@ -82,6 +85,10 @@ pub struct BoidSettings {
     pub visual_range: f32,
     #[inspector(min = 0.0)]
     pub avoid_range: f32,
+    #[inspector(min = 0.0)]
+    pub home_range: f32,
+    #[inspector(min = 0.0)]
+    pub home_effect: f32,
     #[inspector(min = 0.0)]
     pub max_velocity: f32,
     #[inspector(min = 0.0)]
@@ -256,6 +263,7 @@ fn gizmo(
     settings: Res<BoidSettings>,
     debug_settings: Res<BoidDebugSettings>,
     boids: Query<(&Transform, &Velocity), With<Boid>>,
+    homing: Query<&Transform, With<Home<Collectible>>>,
 ) {
     for (transform, velocity) in boids.iter() {
         if debug_settings.cluster_range {
@@ -277,6 +285,16 @@ fn gizmo(
                 transform.translation.xy(),
                 transform.translation.xy() + velocity.0.normalize_or_zero() * 10.0,
                 Color::RED,
+            );
+        }
+    }
+
+    if debug_settings.home_range {
+        for transform in homing.iter() {
+            gizmos.circle_2d(
+                transform.translation.xy(),
+                settings.home_range,
+                Color::rgba(0.0, 0.0, 1.0, 0.1),
             );
         }
     }

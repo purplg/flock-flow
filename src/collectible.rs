@@ -20,7 +20,7 @@ pub enum Event {
     Collect(Entity),
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Collectible {
     pub value: u32,
 }
@@ -58,7 +58,7 @@ fn events(
             }
             Event::Collect(entity) => {
                 if let Ok(mut trans) = collectibles.get_mut(*entity) {
-                    commands.entity(*entity).insert(Cooldown(10.0));
+                    commands.entity(*entity).insert(Cooldown(1.));
                     let pos = Vec2 {
                         x: rng.gen::<f32>() * 1000. - 500.,
                         y: rng.gen::<f32>() * 600. - 300.,
