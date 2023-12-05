@@ -3,6 +3,16 @@ use rand::Rng;
 
 use crate::{rng::RngSource, track::Tracked};
 
+pub struct CollectiblePlugin;
+
+impl Plugin for CollectiblePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<Event>();
+        app.add_systems(Startup, setup);
+        app.add_systems(Update, spawn.run_if(on_event::<Event>()));
+    }
+}
+
 #[derive(Copy, Clone, Debug, Event)]
 pub enum Event {
     Spawn,
@@ -42,15 +52,5 @@ fn spawn(
             ),
             ..default()
         });
-    }
-}
-
-pub struct CollectiblePlugin;
-
-impl Plugin for CollectiblePlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<Event>();
-        app.add_systems(Startup, setup);
-        app.add_systems(Update, spawn.run_if(on_event::<Event>()));
     }
 }
