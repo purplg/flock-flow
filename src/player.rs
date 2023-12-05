@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
+use interpolation::Lerp;
 use rand::Rng;
 
 use crate::{
@@ -15,19 +16,29 @@ use crate::{
 };
 
 #[derive(Component)]
-pub struct Player;
+pub struct Player {
+    target_speed: f32,
+}
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<Boost>();
         app.add_systems(Startup, startup);
         app.add_systems(Update, movement);
         app.add_systems(Update, collect);
+        app.add_systems(Update, boost_cooldown);
+        app.add_systems(Update, speed);
     }
 }
 
-fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResMut<RngSource>) {
+fn startup(
+    mut commands: Commands,
+    settings: Res<BoidSettings>,
+    asset_server: Res<AssetServer>,
+    mut rng: ResMut<RngSource>,
+) {
     let pos = Vec3::new(
         rng.gen::<f32>() * 1000. - 500.,
         rng.gen::<f32>() * 600. - 300.,
@@ -39,31 +50,68 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: ResM
         texture: asset_server.load("player.png"),
         ..default()
     });
-    entity.insert(Player);
+    entity.insert(Player {
+        target_speed: settings.max_velocity,
+    });
     entity.insert(Tracked);
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
+    entity.insert(Boost::default());
     entity.insert(TransformBundle {
         local: Transform::from_translation(pos),
         ..default()
     });
 }
 
+#[derive(Component, Default, Reflect)]
+struct Boost {
+    cooldown: f32,
+}
+
+fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
+    for mut boost in boost.iter_mut() {
+        if boost.cooldown > 0.0 {
+            boost.cooldown -= time.delta_seconds();
+        }
+    }
+}
+
+fn speed(
+    mut player: Query<(&mut Player, &mut Boost)>,
+    mut input: EventReader<InputEvent>,
+    settings: Res<BoidSettings>,
+    time: Res<Time>,
+) {
+    for (mut player, mut boost) in player.iter_mut() {
+        player.target_speed = player
+            .target_speed
+            .lerp(&settings.max_velocity, &time.delta_seconds());
+
+        for event in input.read() {
+            if let InputEvent::Boost = event {
+                if boost.cooldown <= 0.0 {
+                    boost.cooldown = 1.0;
+                    player.target_speed = settings.max_velocity * 2.0;
+                }
+            }
+        }
+    }
+}
+
 fn movement(
     settings: Res<BoidSettings>,
     mut input: EventReader<InputEvent>,
-    mut player: Query<(&mut Velocity, &mut Transform), With<Player>>,
+    mut player: Query<(&Player, &mut Velocity, &mut Transform)>,
     time: Res<Time>,
 ) {
-    let Ok((mut vel, mut transform)) = player.get_single_mut() else {
+    let Ok((player, mut vel, mut transform)) = player.get_single_mut() else {
         return;
     };
 
     let mut turn = 0.0;
     for event in input.read() {
-        match event {
-            InputEvent::Turn(angvel) => turn += angvel,
-            InputEvent::Schwack(_) | InputEvent::SpawnBoi => {}
+        if let InputEvent::Turn(angvel) = event {
+            turn += angvel
         }
     }
 
@@ -74,11 +122,10 @@ fn movement(
         let up = -transform.up().xy();
         angle -= pos.angle_between(up) * time.delta_seconds() * 3.;
     }
-    vel.0 = Vec2::from_angle(angle) * settings.max_velocity;
 
+    vel.0 = Vec2::from_angle(angle) * player.target_speed;
     transform.translation += vel.extend(0.0) * time.delta_seconds();
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
-    vel.0 = vel.0.lerp(Vec2::ZERO, time.delta_seconds() * 10.0);
 }
 
 fn collect(

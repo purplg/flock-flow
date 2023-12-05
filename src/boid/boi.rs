@@ -26,7 +26,7 @@ fn input(
 ) {
     for event in input_events.read() {
         match event {
-            InputEvent::SpawnBoi => {
+            InputEvent::NextWave => {
                 game_events.send(GameEvent::NextWave);
             }
             InputEvent::Schwack(schwack_pos) => {
@@ -41,7 +41,7 @@ fn input(
                     vel.0 += (pos - *schwack_pos) * 10.;
                 }
             }
-            InputEvent::Turn(_) => {}
+            InputEvent::Boost | InputEvent::Turn(_) => {}
         }
     }
 }
