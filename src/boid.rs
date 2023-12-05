@@ -26,6 +26,7 @@ impl Plugin for BoidPlugin {
             visual_range: 15.0,
             avoid_range: 10.0,
             max_velocity: 200.0,
+            bounds: Rect::new(-500., -300., 500., 300.),
         });
         app.insert_resource(BoidDebugSettings {
             cluster_range: false,
@@ -77,6 +78,7 @@ struct BoidSettings {
     avoid_range: f32,
     #[inspector(min = 0.0)]
     max_velocity: f32,
+    bounds: Rect,
 }
 
 #[derive(Component)]
@@ -96,14 +98,16 @@ fn input(
         match event {
             InputEvent::SpawnBoid => {
                 let rng = &mut **rng;
-                game_events.send_batch(rng.sample_iter(Standard).take(100 * 2).tuples().map(
-                    |(x, y): (f32, f32)| {
-                        GameEvent::SpawnBoid(Vec2 {
-                            x: x * 1000. - 500.,
-                            y: y * 600. - 300.,
-                        })
-                    },
-                ));
+                game_events.send_batch(
+                    rng.sample_iter(Standard)
+                        .take(100)
+                        .map(|angle: f32| angle * PI * 2.0)
+                        .map(|angle: f32| (angle.cos(), angle.sin()))
+                        .map(|(x, y): (f32, f32)| {
+                            let pos = Vec2 { x, y } * 1000.;
+                            GameEvent::SpawnBoid(pos)
+                        }),
+                );
             }
             InputEvent::Schwack(schwack_pos) => {
                 for (pos, entity) in quadtree
@@ -293,20 +297,13 @@ fn step(
     time: Res<Time>,
 ) {
     for (mut transform, mut vel) in &mut boids {
-        const CENTER_FORCE: f32 = 100.0;
         let pos = transform.translation.xy();
-        if pos.x < -500.0 {
-            vel.0.x += CENTER_FORCE;
-        } else if pos.x > 500.0 {
-            vel.0.x -= CENTER_FORCE;
+        if !settings.bounds.contains(pos) {
+            vel.0 += -transform.translation.xy().normalize_or_zero() * 10.;
+            vel.0 = vel.clamp_length_max(settings.max_velocity * 5.);
+        } else {
+            vel.0 = vel.clamp_length_max(settings.max_velocity);
         }
-
-        if pos.y < -300.0 {
-            vel.0.y += CENTER_FORCE;
-        } else if pos.y > 300.0 {
-            vel.0.y -= CENTER_FORCE;
-        }
-        vel.0 = vel.clamp_length_max(settings.max_velocity);
         transform.translation += vel.extend(0.0) * time.delta_seconds();
         transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x));
     }
