@@ -40,7 +40,7 @@ fn spawn(
             let mut entity = commands.spawn_empty();
             entity.insert(Name::new("Collectible"));
             entity.insert(SpriteBundle {
-                texture: asset_server.load("node.png"),
+                texture: asset_server.load("collectible.png"),
                 ..default()
             });
             entity.insert(Tracked);
