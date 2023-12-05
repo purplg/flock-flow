@@ -27,6 +27,7 @@ impl Plugin for BoidPlugin {
             avoid_range: 10.0,
             max_velocity: 200.0,
             bounds: Rect::new(-500., -300., 500., 300.),
+            centering_force: 20.,
         });
         app.insert_resource(BoidDebugSettings {
             cluster_range: false,
@@ -78,6 +79,8 @@ pub struct BoidSettings {
     pub avoid_range: f32,
     #[inspector(min = 0.0)]
     pub max_velocity: f32,
+    #[inspector(min = 0.0)]
+    pub centering_force: f32,
     pub bounds: Rect,
 }
 
@@ -299,7 +302,7 @@ fn step(
     for (mut transform, mut vel) in &mut boids {
         let pos = transform.translation.xy();
         if !settings.bounds.contains(pos) {
-            vel.0 += -transform.translation.xy().normalize_or_zero() * 10.;
+            vel.0 += -transform.translation.xy().normalize_or_zero() * settings.centering_force;
             vel.0 = vel.clamp_length_max(settings.max_velocity * 5.);
         } else {
             vel.0 = vel.clamp_length_max(settings.max_velocity);
