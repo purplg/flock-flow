@@ -37,7 +37,7 @@ impl Plugin for BoidPlugin {
         app.insert_resource(BoidDebugSettings {
             cluster_range: false,
             avoid_range: false,
-            home_range: true,
+            home_range: false,
             direction: false,
         });
         app.add_systems(
