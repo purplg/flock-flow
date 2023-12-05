@@ -1,18 +1,20 @@
+mod boi;
+mod calmboi;
+
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
-use rand::{distributions::Standard, Rng};
+use rand::{Rng, RngCore};
 
-use crate::{
-    collectible, input::InputEvent, player::Player, rng::RngSource, track::Tracked, GameEvent,
-};
+use crate::track::Tracked;
 
 pub struct BoidPlugin;
 
 impl Plugin for BoidPlugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<Event>();
         app.register_type::<BoidSettings>();
         app.register_type::<Velocity>();
         app.register_type::<Coherence>();
@@ -33,11 +35,6 @@ impl Plugin for BoidPlugin {
             avoid_range: false,
             direction: false,
         });
-        app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
-        app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
-        app.add_systems(Update, collect.run_if(on_event::<collectible::Event>()));
-        app.add_systems(Update, input);
-        app.add_systems(Update, spawn);
         app.add_systems(
             Update,
             (
@@ -50,9 +47,18 @@ impl Plugin for BoidPlugin {
             )
                 .chain(),
         );
-        app.add_systems(Update, cooldown);
         app.add_systems(Update, gizmo);
+        app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
+        app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
+        app.add_plugins(boi::Plugin);
+        app.add_plugins(calmboi::Plugin);
     }
+}
+
+#[derive(Debug, Event)]
+pub enum Event {
+    SpawnBoi(Vec2),
+    SpawnCalmBoi,
 }
 
 #[derive(Reflect, Resource, Default, InspectorOptions)]
@@ -84,107 +90,41 @@ pub struct BoidSettings {
 }
 
 #[derive(Component)]
-pub struct Boid;
+struct Boid;
+
+#[derive(Bundle)]
+pub(self) struct BoidBundle {
+    boid: Boid,
+    tracked: Tracked,
+    velocity: Velocity,
+    coherence: Coherence,
+    separation: Separation,
+    alignemtn: Alignment,
+    transform: Transform,
+}
+
+impl BoidBundle {
+    pub(self) fn new<R: RngCore>(position: Vec2, rng: &mut R) -> Self {
+        let x = rng.gen::<f32>() * 200. - 100.;
+        let y = rng.gen::<f32>() * 200. - 100.;
+        let vel = Vec2 { x, y } * 20.;
+        BoidBundle {
+            boid: Boid,
+            tracked: Tracked,
+            velocity: Velocity(vel),
+            coherence: Coherence::default(),
+            separation: Separation::default(),
+            alignemtn: Alignment::default(),
+            transform: Transform::from_xyz(position.x, position.y, 0.0),
+        }
+    }
+}
 
 #[derive(Component, Default, Deref, DerefMut, Reflect)]
 pub struct Velocity(pub Vec2);
 
-fn input(
-    mut rng: ResMut<RngSource>,
-    mut input_events: EventReader<InputEvent>,
-    mut game_events: EventWriter<GameEvent>,
-    quadtree: Res<KDTree2<Tracked>>,
-    mut boids: Query<&mut Velocity, (With<Boid>, Without<Player>)>,
-) {
-    for event in input_events.read() {
-        match event {
-            InputEvent::SpawnBoid => {
-                let rng = &mut **rng;
-                game_events.send_batch(
-                    rng.sample_iter(Standard)
-                        .take(100)
-                        .map(|angle: f32| angle * PI * 2.0)
-                        .map(|angle: f32| (angle.cos(), angle.sin()))
-                        .map(|(x, y): (f32, f32)| {
-                            let pos = Vec2 { x, y } * 1000.;
-                            GameEvent::SpawnBoid(pos)
-                        }),
-                );
-            }
-            InputEvent::Schwack(schwack_pos) => {
-                for (pos, entity) in quadtree
-                    .within_distance(*schwack_pos, 100.)
-                    .into_iter()
-                    .filter_map(|(pos, entity)| entity.map(|entity| (pos, entity)))
-                {
-                    let Ok(mut vel) = boids.get_mut(entity) else {
-                        continue;
-                    };
-                    vel.0 += (pos - *schwack_pos) * 10.;
-                }
-            }
-            InputEvent::Turn(_) => {}
-        }
-    }
-}
-
-fn collect(
-    mut rng: ResMut<RngSource>,
-    mut collectible_events: EventReader<collectible::Event>,
-    mut game_events: EventWriter<GameEvent>,
-) {
-    for _ in collectible_events
-        .read()
-        .filter(|event| matches!(event, collectible::Event::Collect))
-    {
-        game_events.send_batch(
-            (&mut **rng)
-                .sample_iter(Standard)
-                .take(100)
-                .map(|angle: f32| angle * PI * 2.0)
-                .map(|angle: f32| (angle.cos(), angle.sin()))
-                .map(|(x, y): (f32, f32)| {
-                    let pos = Vec2 { x, y } * 1000.;
-                    GameEvent::SpawnBoid(pos)
-                }),
-        );
-    }
-}
-
-fn spawn(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut rng: ResMut<RngSource>,
-    mut events: EventReader<GameEvent>,
-) {
-    for event in events.read() {
-        if let GameEvent::SpawnBoid(pos) = event {
-            let rng = &mut **rng;
-            let mut entity = commands.spawn_empty();
-            entity.insert(Name::new("Boid"));
-            entity.insert(SpriteBundle {
-                texture: asset_server.load("boid.png"),
-                ..default()
-            });
-            entity.insert(Boid);
-            entity.insert(Tracked);
-            let x = rng.gen::<f32>() * 200. - 100.;
-            let y = rng.gen::<f32>() * 200. - 100.;
-            let vel = Vec2 { x, y } * 20.;
-            entity.insert(Velocity(vel));
-            entity.insert(Coherence::default());
-            entity.insert(Separation::default());
-            entity.insert(Alignment::default());
-            entity.insert(TransformBundle {
-                local: Transform::from_xyz(pos.x, pos.y, 0.0),
-                ..default()
-            });
-        }
-    }
-}
-
 #[derive(Component, Reflect, Default)]
-pub struct Coherence {
+struct Coherence {
     effect: Vec2,
 }
 
@@ -217,7 +157,7 @@ fn coherence_apply(mut boids: Query<(&mut Velocity, &Coherence)>) {
 }
 
 #[derive(Component, Reflect, Default)]
-pub struct Separation {
+struct Separation {
     effect: Vec2,
 }
 
@@ -308,22 +248,6 @@ fn step(
         }
         transform.translation += vel.extend(0.0) * time.delta_seconds();
         transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
-    }
-}
-
-#[derive(Component)]
-struct HitCooldown(f32);
-
-fn cooldown(
-    mut commands: Commands,
-    mut cooldown: Query<(Entity, &mut HitCooldown)>,
-    time: Res<Time>,
-) {
-    for (entity, mut cooldown) in &mut cooldown {
-        cooldown.0 -= time.delta_seconds();
-        if cooldown.0 < 0.0 {
-            commands.entity(entity).remove::<HitCooldown>();
-        }
     }
 }
 

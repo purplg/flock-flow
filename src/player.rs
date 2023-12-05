@@ -11,7 +11,7 @@ use crate::{
     points::PointEvent,
     rng::RngSource,
     track::Tracked,
-    Health,
+    GameEvent, Health,
 };
 
 #[derive(Component)]
@@ -64,7 +64,7 @@ fn movement(
     for event in input.read() {
         match event {
             InputEvent::Turn(angvel) => turn += angvel,
-            InputEvent::Schwack(_) | InputEvent::SpawnBoid => {}
+            InputEvent::Schwack(_) | InputEvent::SpawnBoi => {}
         }
     }
 
@@ -83,12 +83,12 @@ fn movement(
 }
 
 fn collect(
-    mut commands: Commands,
     quadtree: Res<KDTree2<Tracked>>,
     boids: Query<&Transform, With<Player>>,
-    collectibles: Query<(Entity, &Collectible)>,
+    collectibles: Query<(Entity, &Collectible), Without<collectible::Cooldown>>,
     mut point_event: EventWriter<PointEvent>,
     mut collectible_event: EventWriter<collectible::Event>,
+    mut game_events: EventWriter<GameEvent>,
 ) {
     for player in boids.iter() {
         let pos = player.translation.xy();
@@ -98,10 +98,9 @@ fn collect(
             .filter_map(|(_, entity)| entity)
         {
             if let Ok((entity, collectible)) = collectibles.get(entity) {
-                commands.entity(entity).despawn();
                 point_event.send(PointEvent::Add(collectible.value));
-                collectible_event.send(collectible::Event::Collect);
-                collectible_event.send(collectible::Event::Spawn);
+                collectible_event.send(collectible::Event::Collect(entity));
+                game_events.send(GameEvent::NextWave);
             }
         }
     }

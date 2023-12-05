@@ -8,7 +8,7 @@ pub struct InputPlugin;
 pub enum InputEvent {
     Turn(f32),
     Schwack(Vec2),
-    SpawnBoid,
+    SpawnBoi,
 }
 
 impl Plugin for InputPlugin {
@@ -47,7 +47,7 @@ fn mouse_button(
 
 fn keyboard(keys: Res<Input<KeyCode>>, mut event_writer: EventWriter<InputEvent>) {
     if keys.just_pressed(KeyCode::Space) {
-        event_writer.send(InputEvent::SpawnBoid);
+        event_writer.send(InputEvent::SpawnBoi);
     }
     // if keys.pressed(KeyCode::W) {
     //     event_writer.send(InputEvent::Accelerate(1.0));

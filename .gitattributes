@@ -2,3 +2,5 @@ resource/node.xcf filter=lfs diff=lfs merge=lfs -text
 assets/node.png filter=lfs diff=lfs merge=lfs -text
 assets/player.png filter=lfs diff=lfs merge=lfs -text
 assets/collectible.png filter=lfs diff=lfs merge=lfs -text
+assets/angryboi.png filter=lfs diff=lfs merge=lfs -text
+assets/calmboi.png filter=lfs diff=lfs merge=lfs -text
