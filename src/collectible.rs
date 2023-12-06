@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{rng::RngSource, shockwave, track::Tracked, assets::Images};
+use crate::{assets::Images, rng::RngSource, shockwave, track::Tracked};
 
 pub struct Plugin;
 
