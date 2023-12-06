@@ -6,6 +6,7 @@ use interpolation::Lerp;
 use rand::Rng;
 
 use crate::{
+    assets::Images,
     boid::{Alignment, BoidSettings, Velocity},
     collectible::{self, Collectible},
     input::InputEvent,
@@ -37,7 +38,7 @@ impl Plugin for PlayerPlugin {
 fn startup(
     mut commands: Commands,
     settings: Res<BoidSettings>,
-    asset_server: Res<AssetServer>,
+    images: Res<Images>,
     mut rng: ResMut<RngSource>,
 ) {
     let pos = Vec3::new(
@@ -48,7 +49,7 @@ fn startup(
     let mut entity = commands.spawn_empty();
     entity.insert(Name::new("player"));
     entity.insert(SpriteBundle {
-        texture: asset_server.load("player.png"),
+        texture: images.player.clone(),
         ..default()
     });
     entity.insert(Player {

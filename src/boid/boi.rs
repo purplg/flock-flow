@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::Rng;
 
-use crate::{input::InputEvent, rng::RngSource, track::Tracked, GameEvent};
+use crate::{assets::Images, input::InputEvent, rng::RngSource, track::Tracked, GameEvent};
 
 pub(super) struct Plugin;
 
@@ -48,7 +48,7 @@ fn input(
 
 fn spawn(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    images: Res<Images>,
     mut rng: ResMut<RngSource>,
     mut events: EventReader<super::Event>,
 ) {
@@ -63,7 +63,7 @@ fn spawn(
             entity.insert(Name::new("Boi"));
             entity.insert(Boi);
             entity.insert(SpriteBundle {
-                texture: asset_server.load("boid.png"),
+                texture: images.boi.clone(),
                 ..default()
             });
             entity.insert(BoidBundle::new(pos, &mut **rng));

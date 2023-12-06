@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{rng::RngSource, shockwave, track::Tracked};
+use crate::{rng::RngSource, shockwave, track::Tracked, assets::Images};
 
 pub struct Plugin;
 
@@ -33,7 +33,7 @@ fn setup(mut writer: EventWriter<Event>) {
 
 fn events(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    images: Res<Images>,
     mut rng: ResMut<RngSource>,
     mut reader: EventReader<Event>,
     mut shockwave_events: EventWriter<shockwave::Event>,
@@ -49,7 +49,7 @@ fn events(
                 let mut entity = commands.spawn_empty();
                 entity.insert(Name::new("Collectible"));
                 entity.insert(SpriteBundle {
-                    texture: asset_server.load("collectible.png"),
+                    texture: images.collectible.clone(),
                     ..default()
                 });
                 entity.insert(Tracked);

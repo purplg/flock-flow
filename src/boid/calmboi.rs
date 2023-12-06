@@ -5,6 +5,7 @@ use bevy_spatial::kdtree::KDTree2;
 use bevy_spatial::SpatialAccess;
 use rand::Rng;
 
+use crate::assets::Images;
 use crate::collectible::{self, Collectible};
 
 use crate::{rng::RngSource, track::Tracked, GameEvent};
@@ -54,7 +55,7 @@ fn home<T: Component + Default>(
 
 fn spawn(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    images: Res<Images>,
     mut rng: ResMut<RngSource>,
     mut events: EventReader<super::Event>,
 ) {
@@ -71,7 +72,7 @@ fn spawn(
             let home: Home<Collectible> = Home::default();
             entity.insert(home);
             entity.insert(SpriteBundle {
-                texture: asset_server.load("calmboi.png"),
+                texture: images.calmboi.clone(),
                 ..default()
             });
             entity.insert(BoidBundle::new(pos, &mut **rng));
