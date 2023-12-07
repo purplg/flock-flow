@@ -68,6 +68,14 @@ fn main() {
         use bevy::diagnostic::LogDiagnosticsPlugin;
         app.add_plugins(LogDiagnosticsPlugin::default());
     }
+
+    #[cfg(debug_assertions)]
+    {
+        use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+        app.add_plugins(FrameTimeDiagnosticsPlugin);
+        use bevy::diagnostic::LogDiagnosticsPlugin;
+        app.add_plugins(LogDiagnosticsPlugin::default());
+    }
     app.run();
 }
 
