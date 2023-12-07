@@ -12,6 +12,7 @@ env:
 jobs:
   # Run cargo test
   test:
+    if: false # Disable until there are tests
     name: Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 30
