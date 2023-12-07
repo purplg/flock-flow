@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::ScalingMode};
 
 pub struct CameraPlugin;
 
@@ -15,7 +15,18 @@ pub struct PlayerCamera;
 
 fn spawn(mut commands: Commands) {
     let mut entity = commands.spawn_empty();
-    entity.insert(Camera2dBundle::default());
+    entity.insert(Camera2dBundle {
+        projection: OrthographicProjection {
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 1280.,
+                min_height: 720.,
+            },
+            far: 1000.,
+            near: -1000.,
+            ..default()
+        },
+        ..default()
+    });
     entity.insert(PlayerCamera);
 }
 
