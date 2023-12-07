@@ -24,7 +24,7 @@ fn spawn(mut commands: Commands, images: Res<Images>, mut events: EventReader<su
             let mut entity = commands.spawn_empty();
             entity.insert(Name::new("AngryBoi"));
             entity.insert(AngryBoi);
-            let home: Home<Player> = Home::default();
+            let home: Home<Player> = Home::new(10.0);
             entity.insert(home);
             entity.insert(SpriteBundle {
                 texture: images.angryboi.clone(),

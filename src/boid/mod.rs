@@ -257,16 +257,26 @@ fn alignment_apply(mut boids: Query<(&mut Velocity, &Alignment)>) {
 
 #[derive(Component, Default)]
 pub(self) struct Home<T: Component + Default> {
+    influence: f32,
     _target: PhantomData<T>,
+}
+
+impl<T: Component + Default> Home<T> {
+    pub fn new(influence: f32) -> Self {
+        Self {
+            influence,
+            ..default()
+        }
+    }
 }
 
 fn home<T: Component + Default>(
     settings: Res<BoidSettings>,
     quadtree: Res<KDTree2<Tracked>>,
-    mut homing: Query<(&Transform, &mut Velocity), With<Home<T>>>,
+    mut homing: Query<(&Transform, &mut Velocity, &Home<T>)>,
     other: Query<&T>,
 ) {
-    for (transform, mut vel) in &mut homing {
+    for (transform, mut vel, home) in &mut homing {
         let this_pos = transform.translation.xy();
         let mut effect = Vec2::ZERO;
         for target_pos in quadtree
@@ -276,7 +286,7 @@ fn home<T: Component + Default>(
             .filter_map(|(pos, entity)| other.get(entity).map(|_| pos).ok())
         {
             let dir = (target_pos - this_pos).normalize_or_zero();
-            effect += dir;
+            effect += dir * home.influence;
         }
 
         vel.0 += effect * settings.home_effect;
