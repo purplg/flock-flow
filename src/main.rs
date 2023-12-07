@@ -81,7 +81,7 @@ fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::
     for event in events.read() {
         match event {
             GameEvent::NextWave => {
-                boid_events.send_batch([boid::Event::SpawnBoi].repeat(90));
+                boid_events.send_batch([boid::Event::SpawnBoi].repeat(40));
                 boid_events.send_batch([boid::Event::SpawnCalmBoi].repeat(10));
             }
         }

@@ -17,7 +17,7 @@ use crate::{
     GameEvent,
 };
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Player {
     target_speed: f32,
 }

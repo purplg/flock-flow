@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use super::{BoidBundle, Velocity};
 
 use bevy::prelude::*;
@@ -54,11 +56,6 @@ fn spawn(
 ) {
     for event in events.read() {
         if let super::Event::SpawnBoi = event {
-            let angle: f32 = rng.gen();
-            let pos = Vec2 {
-                x: angle.cos(),
-                y: angle.sin(),
-            } * 1000.;
             let mut entity = commands.spawn_empty();
             entity.insert(Name::new("Boi"));
             entity.insert(Boi);
@@ -66,7 +63,18 @@ fn spawn(
                 texture: images.boi.clone(),
                 ..default()
             });
-            entity.insert(BoidBundle::new(pos, &mut **rng));
+            let angle = rng.gen::<f32>() * PI * 2.;
+            let pos = Vec2 {
+                x: angle.cos(),
+                y: angle.sin(),
+            } * 1000.;
+            entity.insert(BoidBundle::new(
+                pos,
+                Vec2 {
+                    x: rng.gen::<f32>() * 200. - 100.,
+                    y: rng.gen::<f32>() * 200. - 100.,
+                } * 20.,
+            ));
         }
     }
 }

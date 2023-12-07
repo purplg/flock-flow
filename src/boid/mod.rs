@@ -1,3 +1,4 @@
+mod angryboi;
 mod boi;
 mod calmboi;
 
@@ -5,7 +6,6 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
-use rand::{Rng, RngCore};
 
 #[cfg(feature = "inspector")]
 use self::calmboi::Home;
@@ -30,7 +30,7 @@ impl Plugin for BoidPlugin {
             max_velocity: 200.0,
             bounds: Rect::new(-500., -300., 500., 300.),
             centering_force: 20.,
-            home_range: 200.,
+            home_range: 300.,
             home_effect: 2.,
         });
         app.add_systems(
@@ -44,6 +44,7 @@ impl Plugin for BoidPlugin {
         app.add_systems(PostUpdate, step);
         app.add_plugins(boi::Plugin);
         app.add_plugins(calmboi::Plugin);
+        app.add_plugins(angryboi::Plugin);
 
         #[cfg(feature = "inspector")]
         {
@@ -69,6 +70,7 @@ impl Plugin for BoidPlugin {
 pub enum Event {
     SpawnBoi,
     SpawnCalmBoi,
+    SpawnAngryBoi { position: Vec2, velocity: Vec2 },
 }
 
 #[cfg(feature = "inspector")]
@@ -125,14 +127,11 @@ struct BoidBundle {
 }
 
 impl BoidBundle {
-    pub(self) fn new<R: RngCore>(position: Vec2, rng: &mut R) -> Self {
-        let x = rng.gen::<f32>() * 200. - 100.;
-        let y = rng.gen::<f32>() * 200. - 100.;
-        let vel = Vec2 { x, y } * 20.;
+    pub(self) fn new(position: Vec2, velocity: Vec2) -> Self {
         BoidBundle {
             boid: Boid,
             tracked: Tracked,
-            velocity: Velocity(vel),
+            velocity: Velocity(velocity),
             coherence: Coherence::default(),
             separation: Separation::default(),
             alignemtn: Alignment::default(),
