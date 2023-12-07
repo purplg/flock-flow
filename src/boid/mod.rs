@@ -2,13 +2,11 @@ mod angryboi;
 mod boi;
 mod calmboi;
 
-use std::f32::consts::PI;
+use std::{f32::consts::PI, marker::PhantomData};
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 
-#[cfg(feature = "inspector")]
-use self::calmboi::Home;
 #[cfg(feature = "inspector")]
 use crate::collectible::Collectible;
 #[cfg(feature = "inspector")]
@@ -254,6 +252,34 @@ fn alignment(
 fn alignment_apply(mut boids: Query<(&mut Velocity, &Alignment)>) {
     for (mut vel, alignment) in &mut boids {
         vel.0 += alignment.effect;
+    }
+}
+
+#[derive(Component, Default)]
+pub(self) struct Home<T: Component + Default> {
+    _target: PhantomData<T>,
+}
+
+fn home<T: Component + Default>(
+    settings: Res<BoidSettings>,
+    quadtree: Res<KDTree2<Tracked>>,
+    mut homing: Query<(&Transform, &mut Velocity), With<Home<T>>>,
+    other: Query<&T>,
+) {
+    for (transform, mut vel) in &mut homing {
+        let this_pos = transform.translation.xy();
+        let mut effect = Vec2::ZERO;
+        for target_pos in quadtree
+            .within_distance(this_pos, settings.home_range)
+            .into_iter()
+            .filter_map(|(pos, entity)| entity.map(|entity| (pos, entity)))
+            .filter_map(|(pos, entity)| other.get(entity).map(|_| pos).ok())
+        {
+            let dir = (target_pos - this_pos).normalize_or_zero();
+            effect += dir;
+        }
+
+        vel.0 += effect * settings.home_effect;
     }
 }
 
