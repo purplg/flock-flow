@@ -74,6 +74,7 @@ pub enum Event {
 #[cfg(feature = "inspector")]
 #[derive(Resource, Default, Reflect, InspectorOptions)]
 #[reflect(Resource)]
+#[allow(clippy::struct_excessive_bools)]
 struct BoidDebugSettings {
     cluster_range: bool,
     avoid_range: bool,
