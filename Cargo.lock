@@ -1885,6 +1885,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "flock-flow"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_editor_pls",
+ "bevy_spatial",
+ "interpolation",
+ "rand",
+ "rand_chacha",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3537,19 +3550,6 @@ name = "str-buf"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e08d8363704e6c71fc928674353e6b7c23dcea9d82d7012c8faf2a3a025f8d0"
-
-[[package]]
-name = "submission"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
- "bevy_editor_pls",
- "bevy_spatial",
- "interpolation",
- "rand",
- "rand_chacha",
-]
 
 [[package]]
 name = "svg_fmt"
