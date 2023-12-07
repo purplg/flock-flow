@@ -9,10 +9,13 @@ use rand::{Rng, RngCore};
 
 #[cfg(feature = "inspector")]
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
-
-use crate::{collectible::Collectible, track::Tracked};
-
+#[cfg(feature = "inspector")]
+use crate::collectible::Collectible;
+#[cfg(feature = "inspector")]
 use self::calmboi::Home;
+
+use crate::track::Tracked;
+
 
 pub struct BoidPlugin;
 
@@ -31,12 +34,6 @@ impl Plugin for BoidPlugin {
             home_range: 200.,
             home_effect: 2.,
         });
-        app.insert_resource(BoidDebugSettings {
-            cluster_range: false,
-            avoid_range: false,
-            home_range: false,
-            direction: false,
-        });
         app.add_systems(
             Update,
             (
@@ -46,7 +43,6 @@ impl Plugin for BoidPlugin {
             ),
         );
         app.add_systems(PostUpdate, step);
-        app.add_systems(Update, gizmo);
         app.add_plugins(boi::Plugin);
         app.add_plugins(calmboi::Plugin);
 
@@ -59,6 +55,13 @@ impl Plugin for BoidPlugin {
             app.register_type::<Alignment>();
             app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
             app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
+            app.add_systems(Update, gizmo);
+            app.insert_resource(BoidDebugSettings {
+                cluster_range: false,
+                avoid_range: false,
+                home_range: false,
+                direction: false,
+            });
         }
     }
 }
@@ -69,12 +72,9 @@ pub enum Event {
     SpawnCalmBoi,
 }
 
-#[derive(Resource, Default)]
-#[cfg_attr(
-    feature = "inspector",
-    derive(Reflect, InspectorOptions),
-    reflect(Resource)
-)]
+#[cfg(feature = "inspector")]
+#[derive(Resource, Default, Reflect, InspectorOptions)]
+#[reflect(Resource)]
 struct BoidDebugSettings {
     cluster_range: bool,
     avoid_range: bool,
@@ -114,7 +114,7 @@ pub struct BoidSettings {
 struct Boid;
 
 #[derive(Bundle)]
-pub(self) struct BoidBundle {
+struct BoidBundle {
     boid: Boid,
     tracked: Tracked,
     velocity: Velocity,
@@ -265,17 +265,18 @@ fn step(
 ) {
     for (mut transform, mut vel) in &mut boids {
         let pos = transform.translation.xy();
-        if !settings.bounds.contains(pos) {
+        if settings.bounds.contains(pos) {
+            vel.0 = vel.clamp_length_max(settings.max_velocity);
+        } else {
             vel.0 += -transform.translation.xy().normalize_or_zero() * settings.centering_force;
             vel.0 = vel.clamp_length_max(settings.max_velocity * 5.);
-        } else {
-            vel.0 = vel.clamp_length_max(settings.max_velocity);
         }
         transform.translation += vel.extend(0.0) * time.delta_seconds();
         transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
     }
 }
 
+#[cfg(feature = "inspector")]
 fn gizmo(
     mut gizmos: Gizmos,
     settings: Res<BoidSettings>,

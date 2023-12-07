@@ -28,7 +28,7 @@ pub struct Collectible {
 }
 
 fn setup(mut writer: EventWriter<Event>) {
-    writer.send_batch([Event::Spawn].repeat(1));
+    writer.send_batch([Event::Spawn]);
 }
 
 fn events(

@@ -64,7 +64,7 @@ fn setup(mut commands: Commands) {
 struct PointText;
 
 fn update_points(mut text: Query<&mut Text, With<PointText>>, points: Res<Points>) {
-    for mut text in text.iter_mut() {
+    for mut text in &mut text {
         text.sections[1].value = format!("{}", points.0);
     }
 }

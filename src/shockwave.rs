@@ -70,7 +70,7 @@ fn expiration(
     mut shockwaves: Query<(Entity, &mut Shockwave)>,
     time: Res<Time>,
 ) {
-    for (entity, mut shockwave) in shockwaves.iter_mut() {
+    for (entity, mut shockwave) in &mut shockwaves {
         shockwave.remaining -= time.delta_seconds();
         let progress = shockwave.remaining / shockwave.duration;
         shockwave.active_radius = shockwave.max_radius.lerp(&32.0, &progress.quadratic_in());

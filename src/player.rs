@@ -84,7 +84,7 @@ impl Boost {
 }
 
 fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
-    for mut boost in boost.iter_mut() {
+    for mut boost in &mut boost {
         if boost.cooldown > 0.0 {
             boost.cooldown -= time.delta_seconds();
         }
@@ -98,7 +98,7 @@ fn speed(
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
-    for (mut player, transform, mut boost) in player.iter_mut() {
+    for (mut player, transform, mut boost) in &mut player {
         player.target_speed = player
             .target_speed
             .lerp(&settings.max_velocity, &time.delta_seconds());
@@ -132,7 +132,7 @@ fn movement(
     let mut turn = 0.0;
     for event in input.read() {
         if let InputEvent::Turn(angvel) = event {
-            turn += angvel
+            turn += angvel;
         }
     }
 
