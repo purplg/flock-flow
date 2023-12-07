@@ -46,7 +46,7 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "Bevy App".to_string(),
+            title: "Flock Flow".to_string(),
             ..default()
         }),
         ..default()
@@ -59,7 +59,7 @@ fn main() {
         use bevy_editor_pls::{EditorPlugin, EditorWindowPlacement};
         app.add_plugins(EditorPlugin {
             window: EditorWindowPlacement::New(Window {
-                title: "Bevy App Debug".to_string(),
+                title: "Bevy Debug".to_string(),
                 ..default()
             }),
         });
