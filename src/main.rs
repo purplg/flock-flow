@@ -70,6 +70,7 @@ fn main() {
     }
 
     #[cfg(debug_assertions)]
+    #[allow(clippy::items_after_statements)]
     {
         use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
         app.add_plugins(FrameTimeDiagnosticsPlugin);
@@ -85,12 +86,12 @@ fn quit(keys: Res<Input<KeyCode>>, mut app_exit_events: ResMut<Events<AppExit>>)
     }
 }
 
-fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::Event>) {
+fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::SpawnEvent>) {
     for event in events.read() {
         match event {
             GameEvent::NextWave => {
-                boid_events.send_batch([boid::Event::SpawnBoi].repeat(40));
-                boid_events.send_batch([boid::Event::SpawnCalmBoi].repeat(10));
+                boid_events.send_batch([boid::SpawnEvent::Boi].repeat(40));
+                boid_events.send_batch([boid::SpawnEvent::CalmBoi].repeat(10));
             }
         }
     }

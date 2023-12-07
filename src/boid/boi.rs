@@ -52,10 +52,10 @@ fn spawn(
     mut commands: Commands,
     images: Res<Images>,
     mut rng: ResMut<RngSource>,
-    mut events: EventReader<super::Event>,
+    mut events: EventReader<super::SpawnEvent>,
 ) {
     for event in events.read() {
-        if let super::Event::SpawnBoi = event {
+        if let super::SpawnEvent::Boi = event {
             let mut entity = commands.spawn_empty();
             entity.insert(Name::new("Boi"));
             entity.insert(Boi);

@@ -20,7 +20,7 @@ pub struct BoidPlugin;
 
 impl Plugin for BoidPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<Event>();
+        app.add_event::<SpawnEvent>();
         app.insert_resource(BoidSettings {
             coherence: 0.192,
             separation: 0.487,
@@ -67,10 +67,10 @@ impl Plugin for BoidPlugin {
 }
 
 #[derive(Copy, Clone, Debug, Event)]
-pub enum Event {
-    SpawnBoi,
-    SpawnCalmBoi,
-    SpawnAngryBoi { position: Vec2, velocity: Vec2 },
+pub enum SpawnEvent {
+    Boi,
+    CalmBoi,
+    AngryBoi { position: Vec2, velocity: Vec2 },
 }
 
 #[cfg(feature = "inspector")]

@@ -51,9 +51,9 @@ fn home<T: Component + Default>(
     }
 }
 
-fn spawn(mut commands: Commands, images: Res<Images>, mut events: EventReader<super::Event>) {
+fn spawn(mut commands: Commands, images: Res<Images>, mut events: EventReader<super::SpawnEvent>) {
     for event in events.read() {
-        if let super::Event::SpawnAngryBoi { position, velocity } = event {
+        if let super::SpawnEvent::AngryBoi { position, velocity } = event {
             let mut entity = commands.spawn_empty();
             entity.insert(Name::new("AngryBoi"));
             entity.insert(AngryBoi);

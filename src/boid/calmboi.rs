@@ -58,10 +58,10 @@ fn spawn(
     mut commands: Commands,
     images: Res<Images>,
     mut rng: ResMut<RngSource>,
-    mut events: EventReader<super::Event>,
+    mut events: EventReader<super::SpawnEvent>,
 ) {
     for event in events.read() {
-        if let super::Event::SpawnCalmBoi = event {
+        if let super::SpawnEvent::CalmBoi = event {
             let mut entity = commands.spawn_empty();
 
             entity.insert(Name::new("CalmBoi"));
@@ -95,7 +95,7 @@ fn collect(
     collectibles: Query<Entity, (With<Collectible>, Without<collectible::Cooldown>)>,
     mut collectible_event: EventWriter<collectible::Event>,
     mut game_events: EventWriter<GameEvent>,
-    mut boi_events: EventWriter<super::Event>,
+    mut boi_events: EventWriter<super::SpawnEvent>,
 ) {
     for (boid_entity, trans, vel) in boid.iter() {
         let pos = trans.translation.xy();
@@ -108,7 +108,7 @@ fn collect(
             collectible_event.send(collectible::Event::Collect(entity));
             game_events.send(GameEvent::NextWave);
             commands.entity(boid_entity).despawn();
-            boi_events.send(super::Event::SpawnAngryBoi {
+            boi_events.send(super::SpawnEvent::AngryBoi {
                 position: trans.translation.xy(),
                 velocity: vel.0,
             });
