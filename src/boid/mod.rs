@@ -8,14 +8,13 @@ use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::{Rng, RngCore};
 
 #[cfg(feature = "inspector")]
-use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
+use self::calmboi::Home;
 #[cfg(feature = "inspector")]
 use crate::collectible::Collectible;
 #[cfg(feature = "inspector")]
-use self::calmboi::Home;
+use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 
 use crate::track::Tracked;
-
 
 pub struct BoidPlugin;
 
