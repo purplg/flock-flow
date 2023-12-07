@@ -26,12 +26,14 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<Boost>();
         app.add_systems(Startup, startup);
         app.add_systems(Update, movement);
         app.add_systems(Update, collect);
         app.add_systems(Update, boost_cooldown);
         app.add_systems(Update, speed);
+
+        #[cfg(feature = "inspector")]
+        app.register_type::<Boost>();
     }
 }
 
@@ -65,7 +67,8 @@ fn startup(
     });
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component)]
+#[cfg_attr(feature = "inspector", derive(Reflect))]
 struct Boost {
     cooldown: f32,
     multiplier: f32,

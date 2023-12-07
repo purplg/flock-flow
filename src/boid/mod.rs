@@ -4,9 +4,11 @@ mod calmboi;
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::{Rng, RngCore};
+
+#[cfg(feature = "inspector")]
+use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 
 use crate::{collectible::Collectible, track::Tracked};
 
@@ -17,11 +19,6 @@ pub struct BoidPlugin;
 impl Plugin for BoidPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Event>();
-        app.register_type::<BoidSettings>();
-        app.register_type::<Velocity>();
-        app.register_type::<Coherence>();
-        app.register_type::<Separation>();
-        app.register_type::<Alignment>();
         app.insert_resource(BoidSettings {
             coherence: 0.192,
             separation: 0.487,
@@ -50,10 +47,19 @@ impl Plugin for BoidPlugin {
         );
         app.add_systems(PostUpdate, step);
         app.add_systems(Update, gizmo);
-        app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
-        app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
         app.add_plugins(boi::Plugin);
         app.add_plugins(calmboi::Plugin);
+
+        #[cfg(feature = "inspector")]
+        {
+            app.register_type::<BoidSettings>();
+            app.register_type::<Velocity>();
+            app.register_type::<Coherence>();
+            app.register_type::<Separation>();
+            app.register_type::<Alignment>();
+            app.add_plugins(ResourceInspectorPlugin::<BoidSettings>::default());
+            app.add_plugins(ResourceInspectorPlugin::<BoidDebugSettings>::default());
+        }
     }
 }
 
@@ -63,8 +69,12 @@ pub enum Event {
     SpawnCalmBoi,
 }
 
-#[derive(Reflect, Resource, Default, InspectorOptions)]
-#[reflect(Resource)]
+#[derive(Resource, Default)]
+#[cfg_attr(
+    feature = "inspector",
+    derive(Reflect, InspectorOptions),
+    reflect(Resource)
+)]
 struct BoidDebugSettings {
     cluster_range: bool,
     avoid_range: bool,
@@ -72,26 +82,30 @@ struct BoidDebugSettings {
     direction: bool,
 }
 
-#[derive(Reflect, Resource, Default, InspectorOptions)]
-#[reflect(Resource, InspectorOptions)]
+#[derive(Resource, Default)]
+#[cfg_attr(
+    feature = "inspector",
+    derive(Reflect, InspectorOptions),
+    reflect(Resource, InspectorOptions)
+)]
 pub struct BoidSettings {
-    #[inspector(min = 0.0, speed = 0.001)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0, speed = 0.001))]
     pub coherence: f32,
-    #[inspector(min = 0.0, speed = 0.001)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0, speed = 0.001))]
     pub separation: f32,
-    #[inspector(min = 0.0, speed = 0.001)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0, speed = 0.001))]
     pub alignment: f32,
-    #[inspector(min = 0.0)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub visual_range: f32,
-    #[inspector(min = 0.0)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub avoid_range: f32,
-    #[inspector(min = 0.0)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub home_range: f32,
-    #[inspector(min = 0.0)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub home_effect: f32,
-    #[inspector(min = 0.0)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub max_velocity: f32,
-    #[inspector(min = 0.0)]
+    #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub centering_force: f32,
     pub bounds: Rect,
 }
@@ -127,10 +141,12 @@ impl BoidBundle {
     }
 }
 
-#[derive(Component, Default, Deref, DerefMut, Reflect)]
+#[derive(Component, Default, Deref, DerefMut)]
+#[cfg_attr(feature = "inspector", derive(Reflect))]
 pub struct Velocity(pub Vec2);
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Default)]
+#[cfg_attr(feature = "inspector", derive(Reflect))]
 struct Coherence {
     effect: Vec2,
 }
@@ -163,7 +179,8 @@ fn coherence_apply(mut boids: Query<(&mut Velocity, &Coherence)>) {
     }
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Default)]
+#[cfg_attr(feature = "inspector", derive(Reflect))]
 struct Separation {
     effect: Vec2,
 }
@@ -199,7 +216,8 @@ fn separation_apply(mut boids: Query<(&mut Velocity, &Separation)>) {
     }
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Default)]
+#[cfg_attr(feature = "inspector", derive(Reflect))]
 pub struct Alignment {
     pub effect: Vec2,
 }

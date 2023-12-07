@@ -53,7 +53,7 @@ fn main() {
     }));
     app.add_plugins(CorePlugin);
 
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "inspector")]
     #[allow(clippy::items_after_statements)]
     {
         use bevy_editor_pls::{EditorPlugin, EditorWindowPlacement};
