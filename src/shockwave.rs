@@ -5,7 +5,7 @@ use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use interpolation::{Ease, Lerp};
 use rand::Rng;
 
-use crate::{assets::Images, rng::RngSource, track::Tracked, velocity::Velocity};
+use crate::{assets::Images, player::Player, rng::RngSource, track::Tracked, velocity::Velocity};
 
 pub struct Plugin;
 
@@ -138,7 +138,7 @@ fn smoke(
 
 fn avoid(
     quadtree: Res<KDTree2<Tracked>>,
-    mut boids: Query<&mut Velocity>,
+    mut boids: Query<&mut Velocity, Without<Player>>,
     shockwaves: Query<(&Transform, &Shockwave)>,
 ) {
     for (shockwave_trans, shockwave) in shockwaves.iter() {
