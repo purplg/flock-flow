@@ -39,7 +39,7 @@ fn mouse_button(
         return;
     };
 
-    for button in buttons.get_pressed() {
+    for button in buttons.get_just_pressed() {
         if MouseButton::Left == *button {
             input_event.send(InputEvent::Schwack(click_position));
         }

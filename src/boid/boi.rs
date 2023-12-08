@@ -6,7 +6,9 @@ use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::Rng;
 
-use crate::{assets::Images, input::InputEvent, rng::RngSource, track::Tracked, GameEvent};
+use crate::{
+    assets::Images, input::InputEvent, rng::RngSource, shockwave, track::Tracked, GameEvent,
+};
 
 pub(super) struct Plugin;
 
@@ -23,27 +25,19 @@ struct Boi;
 fn input(
     mut input_events: EventReader<InputEvent>,
     mut game_events: EventWriter<GameEvent>,
-    quadtree: Res<KDTree2<Tracked>>,
-    mut bois: Query<&mut Velocity, With<Boi>>,
+    mut shock_events: EventWriter<shockwave::Event>,
 ) {
     for event in input_events.read() {
         match event {
             InputEvent::NextWave => {
                 game_events.send(GameEvent::NextWave);
             }
-            InputEvent::Schwack(schwack_pos) => {
-                for (pos, entity) in quadtree
-                    .within_distance(*schwack_pos, 100.)
-                    .into_iter()
-                    .filter_map(|(pos, entity)| entity.map(|entity| (pos, entity)))
-                {
-                    let Ok(mut vel) = bois.get_mut(entity) else {
-                        continue;
-                    };
-                    vel.0 += (pos - *schwack_pos) * 10.;
-                }
-            }
             InputEvent::Boost | InputEvent::Turn(_) => {}
+            InputEvent::Schwack(schwack_pos) => shock_events.send(shockwave::Event::Spawn {
+                position: *schwack_pos,
+                radius: 100.,
+                duration: Duration::from_secs(1),
+            }),
         }
     }
 }
