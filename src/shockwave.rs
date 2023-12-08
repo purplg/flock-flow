@@ -1,10 +1,11 @@
-use std::time::Duration;
+use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use interpolation::{Ease, Lerp};
+use rand::Rng;
 
-use crate::{boid::Velocity, track::Tracked};
+use crate::{assets::Images, rng::RngSource, track::Tracked, velocity::Velocity};
 
 pub struct Plugin;
 
@@ -13,8 +14,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_event::<Event>();
         app.add_systems(Update, avoid);
         app.add_systems(Update, expiration);
+        app.add_systems(Update, smoke);
         app.add_systems(Update, spawn.run_if(on_event::<Event>()));
-        app.add_systems(Update, gizmo);
     }
 }
 
@@ -25,6 +26,11 @@ pub enum Event {
         radius: f32,
         duration: Duration,
     },
+}
+
+#[derive(Component)]
+struct Smoke {
+    direction: Vec3,
 }
 
 #[derive(Component)]
@@ -46,11 +52,16 @@ impl Shockwave {
     }
 }
 
-fn spawn(mut commands: Commands, mut events: EventReader<Event>) {
+fn spawn(
+    mut commands: Commands,
+    images: Res<Images>,
+    mut events: EventReader<Event>,
+    mut rng: ResMut<RngSource>,
+) {
     for event in events.read() {
         match event {
             Event::Spawn {
-                position,
+                position: center,
                 radius,
                 duration,
             } => {
@@ -58,8 +69,37 @@ fn spawn(mut commands: Commands, mut events: EventReader<Event>) {
                 entity.insert(Name::new("Shockwave"));
                 entity.insert(Shockwave::new(*duration, *radius));
                 entity.insert(TransformBundle::from_transform(
-                    Transform::from_translation(position.extend(0.0)),
+                    Transform::from_translation(center.extend(0.0)),
                 ));
+                entity.insert(InheritedVisibility::VISIBLE);
+
+                entity.with_children(|parent| {
+                    let density = (*radius as u32) / 2;
+                    for i in 0..density {
+                        let angle = (i as f32 / density as f32) * PI * 2.0;
+                        let mut smoke = parent.spawn_empty();
+                        smoke.insert(Name::new("Smoke"));
+                        smoke.insert(Smoke {
+                            direction: Vec3 {
+                                x: angle.cos(),
+                                y: angle.sin(),
+                                z: 0.0,
+                            },
+                        });
+                        smoke.insert(SpriteBundle {
+                            texture: images.smoke.clone(),
+                            transform: Transform {
+                                scale: Vec3::ONE * rng.gen::<f32>(),
+                                rotation: Quat::from_axis_angle(
+                                    Vec3::Z,
+                                    rng.gen::<f32>() * PI * 2.,
+                                ),
+                                ..default()
+                            },
+                            ..default()
+                        });
+                    }
+                });
             }
         }
     }
@@ -75,8 +115,21 @@ fn expiration(
         let progress = shockwave.remaining / shockwave.duration;
         shockwave.active_radius = shockwave.max_radius.lerp(&32.0, &progress.quadratic_in());
         if shockwave.remaining <= 0.0 {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
+    }
+}
+
+fn smoke(
+    mut smoke: Query<(&Parent, &mut Transform, &Smoke)>,
+    shockwaves: Query<&Shockwave>,
+    time: Res<Time>,
+) {
+    for (parent, mut transform, smoke) in &mut smoke {
+        let shockwave = shockwaves.get(parent.get()).unwrap();
+        transform.translation = smoke.direction * shockwave.active_radius;
+        transform.rotation *=
+            Quat::from_axis_angle(Vec3::Z, time.delta_seconds() * 10.0 * shockwave.remaining);
     }
 }
 
@@ -96,15 +149,5 @@ fn avoid(
                 vel.0 -= (shock_pos - boid_pos).normalize_or_zero() * 100.0;
             }
         }
-    }
-}
-
-fn gizmo(mut gizmos: Gizmos, shockwaves: Query<(&Transform, &Shockwave)>) {
-    for (transform, shockwave) in shockwaves.iter() {
-        gizmos.circle_2d(
-            transform.translation.xy(),
-            shockwave.active_radius,
-            Color::ORANGE_RED,
-        );
     }
 }

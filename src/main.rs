@@ -13,6 +13,7 @@ mod rng;
 mod shockwave;
 mod track;
 mod ui;
+mod velocity;
 
 use bevy::{app::AppExit, prelude::*};
 
@@ -32,6 +33,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(collectible::Plugin);
         app.add_plugins(shockwave::Plugin);
         app.add_plugins(ui::Plugin);
+        app.add_plugins(velocity::Plugin);
         app.add_systems(Update, quit);
         app.add_systems(Update, waves);
     }

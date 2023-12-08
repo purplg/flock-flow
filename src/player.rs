@@ -7,13 +7,14 @@ use rand::Rng;
 
 use crate::{
     assets::Images,
-    boid::{Alignment, BoidSettings, Velocity},
+    boid::{Alignment, BoidSettings},
     collectible::{self, Collectible},
     input::InputEvent,
     points::PointEvent,
     rng::RngSource,
     shockwave,
     track::Tracked,
+    velocity::Velocity,
     GameEvent,
 };
 

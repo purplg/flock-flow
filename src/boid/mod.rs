@@ -12,7 +12,7 @@ use crate::collectible::Collectible;
 #[cfg(feature = "inspector")]
 use bevy_inspector_egui::{prelude::*, quick::ResourceInspectorPlugin, InspectorOptions};
 
-use crate::track::Tracked;
+use crate::{track::Tracked, velocity::Velocity};
 
 pub struct BoidPlugin;
 
@@ -39,7 +39,7 @@ impl Plugin for BoidPlugin {
                 (alignment, alignment_apply).chain(),
             ),
         );
-        app.add_systems(PostUpdate, step);
+        app.add_systems(PostUpdate, update);
         app.add_plugins(boi::Plugin);
         app.add_plugins(calmboi::Plugin);
         app.add_plugins(angryboi::Plugin);
@@ -47,7 +47,6 @@ impl Plugin for BoidPlugin {
         #[cfg(feature = "inspector")]
         {
             app.register_type::<BoidSettings>();
-            app.register_type::<Velocity>();
             app.register_type::<Coherence>();
             app.register_type::<Separation>();
             app.register_type::<Alignment>();
@@ -137,10 +136,6 @@ impl BoidBundle {
         }
     }
 }
-
-#[derive(Component, Default, Deref, DerefMut)]
-#[cfg_attr(feature = "inspector", derive(Reflect))]
-pub struct Velocity(pub Vec2);
 
 #[derive(Component, Default)]
 #[cfg_attr(feature = "inspector", derive(Reflect))]
@@ -293,20 +288,17 @@ fn home<T: Component + Default>(
     }
 }
 
-fn step(
+fn update(
     settings: Res<BoidSettings>,
     mut boids: Query<(&mut Transform, &mut Velocity), With<Boid>>,
-    time: Res<Time>,
 ) {
     for (mut transform, mut vel) in &mut boids {
-        let pos = transform.translation.xy();
-        if settings.bounds.contains(pos) {
+        if settings.bounds.contains(transform.translation.xy()) {
             vel.0 = vel.clamp_length_max(settings.max_velocity);
         } else {
             vel.0 += -transform.translation.xy().normalize_or_zero() * settings.centering_force;
-            vel.0 = vel.clamp_length_max(settings.max_velocity * 5.);
+            vel.0 = vel.clamp_length_max(settings.max_velocity * 3.);
         }
-        transform.translation += vel.extend(0.0) * time.delta_seconds();
         transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
     }
 }

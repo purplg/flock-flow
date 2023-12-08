@@ -7,6 +7,7 @@ pub struct Images {
     pub boi: Handle<Image>,
     pub calmboi: Handle<Image>,
     pub angryboi: Handle<Image>,
+    pub smoke: Handle<Image>,
 }
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -16,6 +17,7 @@ fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
         boi: asset_server.load("boi.png"),
         calmboi: asset_server.load("calmboi.png"),
         angryboi: asset_server.load("angryboi.png"),
+        smoke: asset_server.load("smoke.png"),
     });
 }
 
