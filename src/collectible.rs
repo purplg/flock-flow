@@ -69,7 +69,7 @@ fn events(
                     };
                     trans.translation = pos.extend(0.0);
                     let mut entity = commands.entity(*entity);
-                    entity.insert(Cooldown(1.));
+                    entity.insert(Cooldown(0.5));
 
                     shockwave_events.send(shockwave::Event::Spawn {
                         position: trans.translation.xy(),
