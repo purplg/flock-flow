@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use bevy::prelude::*;
 use bevy_spatial::kdtree::KDTree2;
 use bevy_spatial::SpatialAccess;
@@ -10,7 +8,7 @@ use crate::collectible::{self, Collectible};
 
 use crate::{rng::RngSource, track::Tracked, GameEvent};
 
-use super::{BoidBundle, Home, Velocity};
+use super::{BoidBundle, BoidKind, Home, Velocity};
 
 #[derive(Component)]
 struct CalmBoi;
@@ -32,29 +30,25 @@ fn spawn(
     mut events: EventReader<super::SpawnEvent>,
 ) {
     for event in events.read() {
-        if let super::SpawnEvent::CalmBoi = event {
-            let mut entity = commands.spawn_empty();
+        if let super::BoidKind::CalmBoi = event.kind {
+            for _ in 0..event.count {
+                let mut entity = commands.spawn_empty();
 
-            entity.insert(Name::new("CalmBoi"));
-            entity.insert(CalmBoi);
-            let home: Home<Collectible> = Home::new(2.0);
-            entity.insert(home);
-            entity.insert(SpriteBundle {
-                texture: images.calmboi.clone(),
-                ..default()
-            });
+                entity.insert(Name::new("CalmBoi"));
+                entity.insert(CalmBoi);
+                let home: Home<Collectible> = Home::new(2.0);
+                entity.insert(home);
+                entity.insert(SpriteBundle {
+                    texture: images.calmboi.clone(),
+                    ..default()
+                });
 
-            let angle = rng.gen::<f32>() * PI * 2.;
-            entity.insert(BoidBundle::new(
-                Vec2 {
-                    x: angle.cos(),
-                    y: angle.sin(),
-                } * 1000.,
-                Vec2 {
-                    x: rng.gen::<f32>() * 200. - 100.,
-                    y: rng.gen::<f32>() * 200. - 100.,
-                } * 20.,
-            ));
+                let offset = Vec2 {
+                    x: 16. * rng.gen::<f32>() - 8.,
+                    y: 16. * rng.gen::<f32>() - 8.,
+                };
+                entity.insert(BoidBundle::new(event.position + offset, event.velocity));
+            }
         }
     }
 }
@@ -70,16 +64,21 @@ fn collect(
 ) {
     for (boid_entity, trans, vel) in boid.iter() {
         let pos = trans.translation.xy();
-        for entity in quadtree
+        for (position, entity) in quadtree
             .within_distance(pos, 32.0)
             .into_iter()
-            .filter_map(|(_, entity)| entity)
-            .filter(|entity| collectibles.contains(*entity))
+            .filter_map(|(_pos, entity)| entity.map(|entity| (pos, entity)))
+            .filter(|(_pos, entity)| collectibles.contains(*entity))
         {
             collectible_event.send(collectible::Event::Collect(entity));
-            game_events.send(GameEvent::NextWave);
+            game_events.send(GameEvent::NextWave {
+                position,
+                velocity: vel.0,
+            });
             commands.entity(boid_entity).despawn();
-            boi_events.send(super::SpawnEvent::AngryBoi {
+            boi_events.send(super::SpawnEvent {
+                kind: BoidKind::AngryBoi,
+                count: 1,
                 position: trans.translation.xy(),
                 velocity: vel.0,
             });

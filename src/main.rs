@@ -41,7 +41,7 @@ impl Plugin for CorePlugin {
 
 #[derive(Debug, Event)]
 pub enum GameEvent {
-    NextWave,
+    NextWave { position: Vec2, velocity: Vec2 },
 }
 
 fn main() {
@@ -87,9 +87,19 @@ fn quit(keys: Res<Input<KeyCode>>, mut app_exit_events: ResMut<Events<AppExit>>)
 fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::SpawnEvent>) {
     for event in events.read() {
         match event {
-            GameEvent::NextWave => {
-                boid_events.send_batch([boid::SpawnEvent::Boi].repeat(40));
-                boid_events.send_batch([boid::SpawnEvent::CalmBoi].repeat(10));
+            GameEvent::NextWave { position, velocity } => {
+                boid_events.send(boid::SpawnEvent {
+                    kind: boid::BoidKind::Boi,
+                    count: 40,
+                    position: *position,
+                    velocity: *velocity,
+                });
+                boid_events.send(boid::SpawnEvent {
+                    kind: boid::BoidKind::CalmBoi,
+                    count: 10,
+                    position: *position,
+                    velocity: *velocity,
+                });
             }
         }
     }

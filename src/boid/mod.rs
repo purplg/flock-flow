@@ -63,11 +63,19 @@ impl Plugin for BoidPlugin {
     }
 }
 
-#[derive(Copy, Clone, Debug, Event)]
-pub enum SpawnEvent {
+#[derive(Copy, Clone, Debug)]
+pub enum BoidKind {
     Boi,
     CalmBoi,
-    AngryBoi { position: Vec2, velocity: Vec2 },
+    AngryBoi,
+}
+
+#[derive(Copy, Clone, Debug, Event)]
+pub struct SpawnEvent {
+    pub kind: BoidKind,
+    pub count: u32,
+    pub position: Vec2,
+    pub velocity: Vec2,
 }
 
 #[cfg(feature = "inspector")]

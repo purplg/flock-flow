@@ -162,14 +162,14 @@ fn movement(
 
 fn collect(
     quadtree: Res<KDTree2<Tracked>>,
-    boids: Query<&Transform, With<Player>>,
+    player: Query<(&Transform, &Velocity), With<Player>>,
     collectibles: Query<(Entity, &Collectible), Without<collectible::Cooldown>>,
     mut point_event: EventWriter<PointEvent>,
     mut collectible_event: EventWriter<collectible::Event>,
     mut game_events: EventWriter<GameEvent>,
 ) {
-    for player in boids.iter() {
-        let pos = player.translation.xy();
+    for (transform, velocity) in player.iter() {
+        let pos = transform.translation.xy();
         for entity in quadtree
             .within_distance(pos, 32.0)
             .into_iter()
@@ -178,7 +178,10 @@ fn collect(
             if let Ok((entity, collectible)) = collectibles.get(entity) {
                 point_event.send(PointEvent::Add(collectible.value));
                 collectible_event.send(collectible::Event::Collect(entity));
-                game_events.send(GameEvent::NextWave);
+                game_events.send(GameEvent::NextWave {
+                    position: transform.translation.xy(),
+                    velocity: velocity.0,
+                });
             }
         }
     }

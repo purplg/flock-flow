@@ -20,11 +20,20 @@ fn input(
     mut input_events: EventReader<InputEvent>,
     mut game_events: EventWriter<GameEvent>,
     mut shock_events: EventWriter<shockwave::Event>,
+    mut rng: ResMut<RngSource>,
 ) {
     for event in input_events.read() {
         match event {
             InputEvent::NextWave => {
-                game_events.send(GameEvent::NextWave);
+                let angle = rng.gen::<f32>() * PI * 2.;
+                let position = Vec2 {
+                    x: angle.cos(),
+                    y: angle.sin(),
+                } * 1000.;
+                game_events.send(GameEvent::NextWave {
+                    position,
+                    velocity: -position,
+                });
             }
             InputEvent::Schwack(schwack_pos) => shock_events.send(shockwave::Event::Spawn {
                 position: *schwack_pos,
@@ -43,26 +52,21 @@ fn spawn(
     mut events: EventReader<super::SpawnEvent>,
 ) {
     for event in events.read() {
-        if let super::SpawnEvent::Boi = event {
-            let mut entity = commands.spawn_empty();
-            entity.insert(Name::new("Boi"));
-            entity.insert(Boi);
-            entity.insert(SpriteBundle {
-                texture: images.boi.clone(),
-                ..default()
-            });
-            let angle = rng.gen::<f32>() * PI * 2.;
-            let pos = Vec2 {
-                x: angle.cos(),
-                y: angle.sin(),
-            } * 1000.;
-            entity.insert(BoidBundle::new(
-                pos,
-                Vec2 {
-                    x: rng.gen::<f32>() * 200. - 100.,
-                    y: rng.gen::<f32>() * 200. - 100.,
-                } * 20.,
-            ));
+        if let super::BoidKind::Boi = event.kind {
+            for _ in 0..event.count {
+                let mut entity = commands.spawn_empty();
+                entity.insert(Name::new("Boi"));
+                entity.insert(Boi);
+                entity.insert(SpriteBundle {
+                    texture: images.boi.clone(),
+                    ..default()
+                });
+                let offset = Vec2 {
+                    x: 16. * rng.gen::<f32>() - 8.,
+                    y: 16. * rng.gen::<f32>() - 8.,
+                };
+                entity.insert(BoidBundle::new(event.position + offset, event.velocity));
+            }
         }
     }
 }
