@@ -65,6 +65,7 @@ fn spawn(
                 radius,
                 duration,
             } => {
+                assert!(radius > &0.0);
                 let mut entity = commands.spawn_empty();
                 entity.insert(Name::new("Shockwave"));
                 entity.insert(Shockwave::new(*duration, *radius));
@@ -74,9 +75,11 @@ fn spawn(
                 entity.insert(InheritedVisibility::VISIBLE);
 
                 entity.with_children(|parent| {
-                    let density = (*radius as u32) / 2;
-                    for i in 0..density {
-                        let angle = (i as f32 / density as f32) * PI * 2.0;
+                    let density = radius.floor();
+                    #[allow(clippy::cast_possible_truncation)]
+                    let count = density.floor() as i16;
+                    for i in 0..count {
+                        let angle = (f32::from(i) / density) * PI * 2.0;
                         let mut smoke = parent.spawn_empty();
                         smoke.insert(Name::new("Smoke"));
                         smoke.insert(Smoke {

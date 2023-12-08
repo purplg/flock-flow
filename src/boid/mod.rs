@@ -251,7 +251,7 @@ fn alignment_apply(mut boids: Query<(&mut Velocity, &Alignment)>) {
 }
 
 #[derive(Component, Default)]
-pub(self) struct Home<T: Component + Default> {
+struct Home<T: Component + Default> {
     influence: f32,
     _target: PhantomData<T>,
 }
