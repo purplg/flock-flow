@@ -93,13 +93,13 @@ fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
 }
 
 fn speed(
-    mut player: Query<(&mut Player, &Transform, &mut Velocity, &mut Boost)>,
+    mut player: Query<(&mut Player, &Transform, &mut Boost)>,
     mut input: EventReader<InputEvent>,
     mut shockwave_events: EventWriter<shockwave::Event>,
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
-    for (mut player, transform, mut vel, mut boost) in &mut player {
+    for (mut player, transform, mut boost) in &mut player {
         for event in input.read() {
             match event {
                 InputEvent::Boost => {
