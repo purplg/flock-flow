@@ -56,7 +56,7 @@ fn startup(
         ..default()
     });
     entity.insert(Player {
-        target_speed: settings.max_velocity,
+        target_speed: settings.max_speed,
     });
     entity.insert(Tracked);
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
@@ -93,30 +93,36 @@ fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
 }
 
 fn speed(
-    mut player: Query<(&mut Player, &Transform, &mut Boost)>,
+    mut player: Query<(&mut Player, &Transform, &mut Velocity, &mut Boost)>,
     mut input: EventReader<InputEvent>,
     mut shockwave_events: EventWriter<shockwave::Event>,
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
-    for (mut player, transform, mut boost) in &mut player {
-        player.target_speed = player
-            .target_speed
-            .lerp(&settings.max_velocity, &time.delta_seconds());
-
+    for (mut player, transform, mut vel, mut boost) in &mut player {
         for event in input.read() {
-            if let InputEvent::Boost = event {
-                if boost.cooldown <= 0.0 {
-                    boost.cooldown = 1.0;
-                    player.target_speed = settings.max_velocity * boost.multiplier;
-                    shockwave_events.send(shockwave::Event::Spawn {
-                        position: transform.translation.xy(),
-                        radius: 100.,
-                        duration: Duration::from_secs_f32(0.5),
-                    });
+            match event {
+                InputEvent::Boost => {
+                    if boost.cooldown <= 0.0 {
+                        boost.cooldown = 1.0;
+                        player.target_speed = settings.max_speed * boost.multiplier;
+                        shockwave_events.send(shockwave::Event::Spawn {
+                            position: transform.translation.xy(),
+                            radius: 100.,
+                            duration: Duration::from_secs_f32(0.5),
+                        });
+                    }
                 }
+                InputEvent::SlowDown => {
+                    player.target_speed = settings.max_speed * 0.5;
+                }
+                InputEvent::Turn(_) | InputEvent::Schwack(_) | InputEvent::NextWave => {}
             }
         }
+
+        player.target_speed = player
+            .target_speed
+            .lerp(&settings.max_speed, &time.delta_seconds());
     }
 }
 
@@ -145,7 +151,11 @@ fn movement(
         angle -= pos.angle_between(up) * time.delta_seconds() * 3.;
     }
 
-    vel.0 = Vec2::from_angle(angle) * player.target_speed;
+    vel.0 = Vec2::from_angle(angle) * vel.0.length();
+    vel.0 = vel.0.lerp(
+        vel.0.normalize_or_zero() * player.target_speed,
+        time.delta_seconds() * 10.0,
+    );
     transform.translation += vel.extend(0.0) * time.delta_seconds();
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
 }

@@ -1,14 +1,8 @@
-use std::f32::consts::PI;
-
-use super::{BoidBundle, Velocity};
-
+use super::BoidBundle;
+use crate::{assets::Images, input::InputEvent, rng::RngSource, shockwave, GameEvent};
 use bevy::prelude::*;
-use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use rand::Rng;
-
-use crate::{
-    assets::Images, input::InputEvent, rng::RngSource, shockwave, track::Tracked, GameEvent,
-};
+use std::{f32::consts::PI, time::Duration};
 
 pub(super) struct Plugin;
 
@@ -32,12 +26,12 @@ fn input(
             InputEvent::NextWave => {
                 game_events.send(GameEvent::NextWave);
             }
-            InputEvent::Boost | InputEvent::Turn(_) => {}
             InputEvent::Schwack(schwack_pos) => shock_events.send(shockwave::Event::Spawn {
                 position: *schwack_pos,
                 radius: 100.,
                 duration: Duration::from_secs(1),
             }),
+            InputEvent::SlowDown | InputEvent::Boost | InputEvent::Turn(_) => {}
         }
     }
 }

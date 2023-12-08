@@ -25,7 +25,7 @@ impl Plugin for BoidPlugin {
             alignment: 0.435,
             visual_range: 15.0,
             avoid_range: 10.0,
-            max_velocity: 200.0,
+            max_speed: 200.0,
             bounds: Rect::new(-500., -300., 500., 300.),
             centering_force: 20.,
             home_range: 300.,
@@ -103,7 +103,7 @@ pub struct BoidSettings {
     #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub home_effect: f32,
     #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
-    pub max_velocity: f32,
+    pub max_speed: f32,
     #[cfg_attr(feature = "inspector", inspector(min = 0.0))]
     pub centering_force: f32,
     pub bounds: Rect,
@@ -294,10 +294,10 @@ fn update(
 ) {
     for (mut transform, mut vel) in &mut boids {
         if settings.bounds.contains(transform.translation.xy()) {
-            vel.0 = vel.clamp_length_max(settings.max_velocity);
+            vel.0 = vel.clamp_length_max(settings.max_speed);
         } else {
             vel.0 += -transform.translation.xy().normalize_or_zero() * settings.centering_force;
-            vel.0 = vel.clamp_length_max(settings.max_velocity * 3.);
+            vel.0 = vel.clamp_length_max(settings.max_speed * 3.);
         }
         transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
     }
