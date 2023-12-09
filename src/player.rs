@@ -32,6 +32,8 @@ impl Plugin for PlayerPlugin {
         app.add_systems(Update, collect);
         app.add_systems(Update, boost_cooldown);
         app.add_systems(Update, speed);
+        app.add_systems(Update, fast_removes_alignment);
+        app.add_systems(Update, slow_adds_alignment);
 
         #[cfg(feature = "inspector")]
         app.register_type::<Boost>();
@@ -158,6 +160,34 @@ fn movement(
     );
     transform.translation += vel.extend(0.0) * time.delta_seconds();
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
+}
+
+fn fast_removes_alignment(
+    mut commands: Commands,
+    settings: Res<BoidSettings>,
+    player: Query<(Entity, &Velocity), (With<Player>, With<Alignment>)>,
+) {
+    let Ok((entity, vel)) = player.get_single() else {
+        return;
+    };
+
+    if vel.length_squared() > (settings.max_speed * settings.max_speed) * 1.1 {
+        commands.entity(entity).remove::<Alignment>();
+    }
+}
+
+fn slow_adds_alignment(
+    mut commands: Commands,
+    settings: Res<BoidSettings>,
+    player: Query<(Entity, &Velocity), (With<Player>, Without<Alignment>)>,
+) {
+    let Ok((entity, vel)) = player.get_single() else {
+        return;
+    };
+
+    if vel.length_squared() < (settings.max_speed * settings.max_speed) * 1.1 {
+        commands.entity(entity).insert(Alignment::default());
+    }
 }
 
 fn collect(
