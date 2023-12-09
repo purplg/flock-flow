@@ -162,7 +162,9 @@ fn movement(
     let speed = vel.0.normalize_or_zero() * player.target_speed;
     vel.0 = vel.0.lerp(speed, time.delta_seconds() * 10.0);
     transform.translation += vel.extend(0.0) * time.delta_seconds();
+
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
+
     let ratio = speed.length() / (settings.max_speed * boost.multiplier - 0.5);
     const MIN_SCALE: Vec2 = Vec2::new(0.5, 0.5);
     const MAX_SCALE: Vec2 = Vec2::new(2.0, 2.0);
