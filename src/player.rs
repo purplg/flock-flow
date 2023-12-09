@@ -101,31 +101,33 @@ fn speed(
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
-    for (mut player, transform, mut boost) in &mut player {
-        for event in input.read() {
-            match event {
-                InputEvent::Boost => {
-                    if boost.cooldown <= 0.0 {
-                        boost.cooldown = 1.0;
-                        player.target_speed = settings.max_speed * boost.multiplier;
-                        shockwave_events.send(shockwave::Event::Spawn {
-                            position: transform.translation.xy(),
-                            radius: 100.,
-                            duration: Duration::from_secs_f32(0.5),
-                        });
-                    }
-                }
-                InputEvent::SlowDown => {
-                    player.target_speed = settings.max_speed * 0.5;
-                }
-                InputEvent::Turn(_) | InputEvent::Schwack(_) | InputEvent::NextWave => {}
-            }
-        }
+    let Ok((mut player, transform, mut boost)) = player.get_single_mut() else {
+        return;
+    };
 
-        player.target_speed = player
-            .target_speed
-            .lerp(&settings.max_speed, &time.delta_seconds());
+    for event in input.read() {
+        match event {
+            InputEvent::Boost => {
+                if boost.cooldown <= 0.0 {
+                    boost.cooldown = 1.0;
+                    player.target_speed = settings.max_speed * boost.multiplier;
+                    shockwave_events.send(shockwave::Event::Spawn {
+                        position: transform.translation.xy(),
+                        radius: 100.,
+                        duration: Duration::from_secs_f32(0.5),
+                    });
+                }
+            }
+            InputEvent::SlowDown => {
+                player.target_speed = settings.max_speed * 0.5;
+            }
+            InputEvent::Turn(_) | InputEvent::Schwack(_) | InputEvent::NextWave => {}
+        }
     }
+
+    player.target_speed = player
+        .target_speed
+        .lerp(&settings.max_speed, &time.delta_seconds());
 }
 
 fn movement(
