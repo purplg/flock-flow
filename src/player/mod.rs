@@ -20,6 +20,9 @@ use crate::{
     GameEvent,
 };
 
+const MIN_SCALE: Vec2 = Vec2::new(0.5, 0.5);
+const MAX_SCALE: Vec2 = Vec2::new(2.0, 2.0);
+
 #[derive(Component, Default)]
 pub struct Player {
     target_speed: f32,
@@ -166,13 +169,12 @@ fn movement(
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
 
     let ratio = speed.length() / (settings.max_speed * boost.multiplier - 0.5);
-    const MIN_SCALE: Vec2 = Vec2::new(0.5, 0.5);
-    const MAX_SCALE: Vec2 = Vec2::new(2.0, 2.0);
     transform.scale = (MIN_SCALE)
         .lerp(MAX_SCALE, ratio.quadratic_out())
         .extend(0.0);
 }
 
+#[allow(clippy::type_complexity)]
 fn fast_removes_alignment(
     mut commands: Commands,
     settings: Res<BoidSettings>,
@@ -187,6 +189,7 @@ fn fast_removes_alignment(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn slow_adds_alignment(
     mut commands: Commands,
     settings: Res<BoidSettings>,

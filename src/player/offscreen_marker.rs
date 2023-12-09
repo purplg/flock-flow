@@ -41,6 +41,7 @@ fn setup(mut commands: Commands) {
     entity.insert(TransformBundle::default());
 }
 
+#[allow(clippy::type_complexity)]
 fn out_of_bounds(
     settings: Res<BoidSettings>,
     mut marker: Query<&mut Transform, (With<OffscreenMarker>, Without<Player>, Without<Disabled>)>,
