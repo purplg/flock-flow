@@ -12,9 +12,9 @@ build-wasm: clean
     wasm-bindgen --no-typescript --out-name bevy_game --out-dir build/wasm --target web build/wasm/bevy_game_bg.wasm
 
 package-wasm: clean build-wasm
-    rm -f dist/flock-flow-wasm-v0.0.1-test.zip
+    rm -f dist/*.zip
     mkdir -p dist/
-    cd build/wasm && zip -r ../../dist/flock-flow-wasm-v0.0.1-test.zip .
+    cd build/wasm && zip -r ../../dist/flock-flow-wasm.zip .
 
 run: build-wasm
     sfz ./build/wasm
