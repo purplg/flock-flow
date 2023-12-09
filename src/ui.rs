@@ -21,16 +21,13 @@ fn setup(mut commands: Commands) {
 
     entity
         .insert(NodeBundle {
-            border_color: BorderColor(Color::GREEN),
             style: Style {
-                border: UiRect::px(1.0, 1.0, 1.0, 1.0),
                 display: Display::Flex,
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
                 justify_content: JustifyContent::Center,
-                padding: UiRect::percent(1.0, 1.0, 1.0, 1.0),
                 ..default()
             },
             ..default()

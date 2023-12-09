@@ -16,10 +16,7 @@ pub struct PlayerCamera;
 fn spawn(mut commands: Commands) {
     let mut entity = commands.spawn_empty();
     let mut camera = Camera2dBundle::default();
-    camera.projection.scaling_mode = ScalingMode::AutoMin {
-        min_width: 640.,
-        min_height: 364.,
-    };
+    camera.projection.scaling_mode = ScalingMode::FixedVertical(720.);
     entity.insert(camera);
     entity.insert(PlayerCamera);
 }
