@@ -6,3 +6,4 @@ assets/angryboi.png filter=lfs diff=lfs merge=lfs -text
 assets/calmboi.png filter=lfs diff=lfs merge=lfs -text
 assets/boi.png filter=lfs diff=lfs merge=lfs -text
 assets/smoke.png filter=lfs diff=lfs merge=lfs -text
+resource/assets.svg filter=lfs diff=lfs merge=lfs -text
