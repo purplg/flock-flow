@@ -63,7 +63,7 @@ fn events(
                     ..default()
                 });
 
-                entity.insert(Cooldown(1.));
+                entity.insert(Cooldown(0.5));
             }
             Event::Collect(entity) => {
                 if let Ok(mut trans) = collectibles.get_mut(*entity) {
