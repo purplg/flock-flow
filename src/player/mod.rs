@@ -1,8 +1,10 @@
+mod offscreen_marker;
+
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
-use interpolation::Lerp;
+use interpolation::{Ease, Lerp};
 use rand::Rng;
 
 use crate::{
@@ -34,6 +36,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(Update, speed.run_if(on_event::<InputEvent>()));
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
+        app.add_plugins(offscreen_marker::Plugin);
 
         #[cfg(feature = "inspector")]
         app.register_type::<Boost>();
@@ -133,10 +136,10 @@ fn speed(
 fn movement(
     settings: Res<BoidSettings>,
     mut input: EventReader<InputEvent>,
-    mut player: Query<(&Player, &mut Velocity, &mut Transform)>,
+    mut player: Query<(&Player, &mut Velocity, &mut Transform, &Boost)>,
     time: Res<Time>,
 ) {
-    let Ok((player, mut vel, mut transform)) = player.get_single_mut() else {
+    let Ok((player, mut vel, mut transform, boost)) = player.get_single_mut() else {
         return;
     };
 
@@ -156,12 +159,16 @@ fn movement(
     }
 
     vel.0 = Vec2::from_angle(angle) * vel.0.length();
-    vel.0 = vel.0.lerp(
-        vel.0.normalize_or_zero() * player.target_speed,
-        time.delta_seconds() * 10.0,
-    );
+    let speed = vel.0.normalize_or_zero() * player.target_speed;
+    vel.0 = vel.0.lerp(speed, time.delta_seconds() * 10.0);
     transform.translation += vel.extend(0.0) * time.delta_seconds();
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
+    let ratio = speed.length() / (settings.max_speed * boost.multiplier - 0.5);
+    const MIN_SCALE: Vec2 = Vec2::new(0.5, 0.5);
+    const MAX_SCALE: Vec2 = Vec2::new(2.0, 2.0);
+    transform.scale = (MIN_SCALE)
+        .lerp(MAX_SCALE, ratio.quadratic_out())
+        .extend(0.0);
 }
 
 fn fast_removes_alignment(
@@ -173,7 +180,7 @@ fn fast_removes_alignment(
         return;
     };
 
-    if vel.length_squared() > (settings.max_speed * settings.max_speed) * 1.1 {
+    if vel.length_squared() > (settings.max_speed * settings.max_speed) * 1.5 {
         commands.entity(entity).remove::<Alignment>();
     }
 }
@@ -187,7 +194,7 @@ fn slow_adds_alignment(
         return;
     };
 
-    if vel.length_squared() < (settings.max_speed * settings.max_speed) * 1.1 {
+    if vel.length_squared() < (settings.max_speed * settings.max_speed) * 1.5 {
         commands.entity(entity).insert(Alignment::default());
     }
 }
