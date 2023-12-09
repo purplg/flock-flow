@@ -31,7 +31,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(Update, movement);
         app.add_systems(Update, collect);
         app.add_systems(Update, boost_cooldown);
-        app.add_systems(Update, speed);
+        app.add_systems(Update, speed.run_if(on_event::<InputEvent>()));
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
 

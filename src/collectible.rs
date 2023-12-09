@@ -11,7 +11,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Event>();
         app.add_systems(Startup, setup);
-        app.add_systems(PostUpdate, events);
+        app.add_systems(PostUpdate, events.run_if(on_event::<Event>()));
         app.add_systems(Update, cooldown);
     }
 }

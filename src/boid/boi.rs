@@ -8,8 +8,8 @@ pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, input);
-        app.add_systems(Update, spawn);
+        app.add_systems(Update, input.run_if(on_event::<InputEvent>()));
+        app.add_systems(Update, spawn.run_if(on_event::<super::SpawnEvent>()));
     }
 }
 

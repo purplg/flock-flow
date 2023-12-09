@@ -35,7 +35,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(ui::Plugin);
         app.add_plugins(velocity::Plugin);
         app.add_systems(Update, quit);
-        app.add_systems(Update, waves);
+        app.add_systems(Update, waves.run_if(on_event::<GameEvent>()));
     }
 }
 
