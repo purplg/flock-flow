@@ -30,7 +30,8 @@ pub enum Event {
 
 #[derive(Component)]
 struct Smoke {
-    direction: Vec3,
+    destination_offset: Vec3,
+    scale: f32,
 }
 
 #[derive(Component)]
@@ -79,20 +80,23 @@ fn spawn(
                     #[allow(clippy::cast_possible_truncation)]
                     let count = density.floor() as i16;
                     for i in 0..count {
+                        let offset = rng.gen::<f32>().elastic_out();
                         let angle = (f32::from(i) / density) * PI * 2.0;
+                        let scale = rng.gen::<f32>() * 0.5;
                         let mut smoke = parent.spawn_empty();
                         smoke.insert(Name::new("Smoke"));
                         smoke.insert(Smoke {
-                            direction: Vec3 {
+                            destination_offset: Vec3 {
                                 x: angle.cos(),
                                 y: angle.sin(),
                                 z: 0.0,
-                            },
+                            } * offset,
+                            scale,
                         });
                         smoke.insert(SpriteBundle {
                             texture: images.smoke.clone(),
                             transform: Transform {
-                                scale: Vec3::ONE * rng.gen::<f32>(),
+                                scale: Vec3::ONE * scale,
                                 rotation: Quat::from_axis_angle(
                                     Vec3::Z,
                                     rng.gen::<f32>() * PI * 2.,
@@ -130,9 +134,10 @@ fn smoke(
 ) {
     for (parent, mut transform, smoke) in &mut smoke {
         let shockwave = shockwaves.get(parent.get()).unwrap();
-        transform.translation = smoke.direction * shockwave.active_radius;
+        transform.translation = smoke.destination_offset * shockwave.active_radius;
         transform.rotation *=
-            Quat::from_axis_angle(Vec3::Z, time.delta_seconds() * 10.0 * shockwave.remaining);
+            Quat::from_axis_angle(Vec3::Z, time.delta_seconds() * 20.0 * shockwave.remaining);
+        transform.scale = Vec3::ONE * smoke.scale * shockwave.remaining;
     }
 }
 

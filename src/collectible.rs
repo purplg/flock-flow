@@ -49,6 +49,10 @@ fn events(
                 let mut entity = commands.spawn_empty();
                 entity.insert(Name::new("Collectible"));
                 entity.insert(SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::GREEN,
+                        ..default()
+                    },
                     texture: images.collectible.clone(),
                     ..default()
                 });

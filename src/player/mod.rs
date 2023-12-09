@@ -20,8 +20,8 @@ use crate::{
     GameEvent,
 };
 
-const MIN_SCALE: Vec2 = Vec2::new(0.5, 0.5);
-const MAX_SCALE: Vec2 = Vec2::new(2.0, 2.0);
+const MIN_SCALE: Vec2 = Vec2::new(0.2, 0.2);
+const MAX_SCALE: Vec2 = Vec2::new(1.0, 1.0);
 
 #[derive(Component, Default)]
 pub struct Player {
@@ -60,6 +60,10 @@ fn startup(
     let mut entity = commands.spawn_empty();
     entity.insert(Name::new("player"));
     entity.insert(SpriteBundle {
+        sprite: Sprite {
+            color: Color::GREEN,
+            ..default()
+        },
         texture: images.player.clone(),
         ..default()
     });

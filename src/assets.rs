@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 #[derive(Resource)]
 pub struct Images {
+    pub background: Handle<Image>,
     pub player: Handle<Image>,
     pub collectible: Handle<Image>,
     pub boi: Handle<Image>,
@@ -12,6 +13,7 @@ pub struct Images {
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(Images {
+        background: asset_server.load("background.png"),
         player: asset_server.load("player.png"),
         collectible: asset_server.load("collectible.png"),
         boi: asset_server.load("boi.png"),
