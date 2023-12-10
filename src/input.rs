@@ -7,6 +7,7 @@ pub enum InputEvent {
     Brake,
     Turn(f32),
     Boost,
+    Pause,
 }
 
 impl Plugin for InputPlugin {
@@ -29,5 +30,9 @@ fn keyboard(keys: Res<Input<KeyCode>>, mut event_writer: EventWriter<InputEvent>
 
     if keys.just_pressed(KeyCode::ShiftLeft) {
         event_writer.send(InputEvent::Boost);
+    }
+
+    if keys.just_pressed(KeyCode::Escape) {
+        event_writer.send(InputEvent::Pause);
     }
 }

@@ -36,14 +36,22 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, startup);
-        app.add_systems(Update, movement);
+        app.add_systems(Update, movement.run_if(in_state(crate::GameState::Playing)));
+        app.add_systems(OnEnter(crate::GameState::Paused), pause);
+        app.add_systems(OnExit(crate::GameState::Paused), unpause);
         app.add_systems(Update, collect);
-        app.add_systems(Update, boost_cooldown);
+        app.add_systems(
+            Update,
+            boost_cooldown.run_if(in_state(crate::GameState::Playing)),
+        );
         app.add_systems(PreUpdate, input.run_if(on_event::<InputEvent>()));
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
         app.add_systems(Update, die.run_if(on_event::<health::Event>()));
-        app.add_systems(Update, engine_audio);
+        app.add_systems(
+            Update,
+            engine_audio.run_if(in_state(crate::GameState::Playing)),
+        );
         app.add_systems(OnEnter(crate::GameState::GameOver), gameover);
         app.add_plugins(offscreen_marker::Plugin);
 
@@ -83,7 +91,7 @@ fn startup(
     entity.insert(Health(1));
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
-    entity.insert(Boost::new(2.5));
+    entity.insert(Boost::new(4.));
     entity.insert(Brake::new(2000.));
     entity.insert(TransformBundle {
         local: Transform::from_translation(pos),
@@ -177,6 +185,7 @@ fn input(
                 player.angvel += dir * player.turn_speed * 2.;
                 player.angvel = player.angvel.clamp(-player.turn_speed, player.turn_speed);
             }
+            InputEvent::Pause => {}
         }
     }
 }
@@ -203,7 +212,6 @@ fn movement(
     vel.0 = Vec2::from_angle(angle) * vel.0.length();
     let target_speed = vel.0.normalize_or_zero() * player.target_linvel;
     vel.0 = vel.0.lerp(target_speed, time.delta_seconds() * 10.0);
-    transform.translation += vel.extend(0.0) * time.delta_seconds();
 
     // Rotation
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
@@ -347,4 +355,20 @@ fn engine_audio(
         return;
     };
     playback.set_speed(vel.0.length() / (settings.max_speed * boost.multiplier - 0.5) * 2.);
+}
+
+fn pause(player: Query<&AudioSink, With<Player>>) {
+    let Ok(playback) = player.get_single() else {
+        return;
+    };
+
+    playback.pause();
+}
+
+fn unpause(player: Query<&AudioSink, With<Player>>) {
+    let Ok(playback) = player.get_single() else {
+        return;
+    };
+
+    playback.play();
 }

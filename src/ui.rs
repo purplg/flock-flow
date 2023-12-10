@@ -3,6 +3,7 @@ use bevy::{prelude::*, sprite::Anchor};
 use crate::{
     boid::{BoidKind, SpawnEvent},
     points::Points,
+    GameState,
 };
 
 pub struct Plugin;
@@ -12,7 +13,9 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Startup, setup);
         app.add_systems(Update, update_points.run_if(resource_changed::<Points>()));
         app.add_systems(Update, update_entity_count.run_if(on_event::<SpawnEvent>()));
-        app.add_systems(OnEnter(crate::GameState::GameOver), gameover);
+        app.add_systems(OnEnter(GameState::Paused), show_menu);
+        app.add_systems(OnExit(GameState::Paused), hide_menu);
+        app.add_systems(OnEnter(GameState::GameOver), gameover);
     }
 }
 
@@ -144,4 +147,36 @@ fn gameover(mut commands: Commands, ui: Query<Entity, With<UI>>) {
             )
             .insert(GameOverNode);
     });
+}
+
+#[derive(Component)]
+struct MenuNode;
+
+fn show_menu(mut commands: Commands, ui: Query<Entity, With<UI>>) {
+    let Ok(ui) = ui.get_single() else {
+        return;
+    };
+
+    commands.entity(ui).with_children(|parent| {
+        parent
+            .spawn(
+                TextBundle::from_section(
+                    "Paused",
+                    TextStyle {
+                        font_size: 36.0,
+                        ..default()
+                    },
+                )
+                .with_text_alignment(TextAlignment::Center),
+            )
+            .insert(MenuNode);
+    });
+}
+
+fn hide_menu(mut commands: Commands, ui: Query<Entity, With<MenuNode>>) {
+    let Ok(menu) = ui.get_single() else {
+        return;
+    };
+
+    commands.entity(menu).despawn_recursive();
 }

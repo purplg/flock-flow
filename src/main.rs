@@ -16,7 +16,8 @@ mod track;
 mod ui;
 mod velocity;
 
-use bevy::{app::AppExit, prelude::*};
+use bevy::prelude::*;
+use input::InputEvent;
 
 struct CorePlugin;
 
@@ -37,8 +38,15 @@ impl Plugin for CorePlugin {
         app.add_plugins(shockwave::Plugin);
         app.add_plugins(ui::Plugin);
         app.add_plugins(velocity::Plugin);
-        app.add_systems(Update, quit);
         app.add_systems(Update, waves.run_if(on_event::<GameEvent>()));
+        app.add_systems(
+            Update,
+            (
+                pause.run_if(in_state(GameState::Playing)),
+                resume.run_if(in_state(GameState::Paused)),
+            )
+                .run_if(on_event::<InputEvent>()),
+        );
     }
 }
 
@@ -51,6 +59,7 @@ pub enum GameEvent {
 enum GameState {
     #[default]
     Playing,
+    Paused,
     GameOver,
 }
 
@@ -97,12 +106,6 @@ fn main() {
     app.run();
 }
 
-fn quit(keys: Res<Input<KeyCode>>, mut app_exit_events: ResMut<Events<AppExit>>) {
-    if keys.just_pressed(KeyCode::Escape) {
-        app_exit_events.send(AppExit);
-    }
-}
-
 fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::SpawnEvent>) {
     for event in events.read() {
         match event {
@@ -120,6 +123,22 @@ fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::
                     velocity: *velocity,
                 });
             }
+        }
+    }
+}
+
+fn pause(mut input: EventReader<input::InputEvent>, mut state: ResMut<NextState<GameState>>) {
+    for input in input.read() {
+        if let input::InputEvent::Pause = input {
+            state.set(GameState::Paused)
+        }
+    }
+}
+
+fn resume(mut input: EventReader<input::InputEvent>, mut state: ResMut<NextState<GameState>>) {
+    for input in input.read() {
+        if let input::InputEvent::Pause = input {
+            state.set(GameState::Playing)
         }
     }
 }

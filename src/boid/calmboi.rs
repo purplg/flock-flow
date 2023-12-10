@@ -22,7 +22,10 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, spawn.run_if(on_event::<super::SpawnEvent>()));
         app.add_systems(Update, collect);
-        app.add_systems(Update, super::home::<Collectible>);
+        app.add_systems(
+            Update,
+            super::home::<Collectible>.run_if(in_state(crate::GameState::Playing)),
+        );
     }
 }
 

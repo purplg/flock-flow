@@ -4,7 +4,10 @@ pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, update);
+        app.add_systems(
+            PostUpdate,
+            update.run_if(in_state(crate::GameState::Playing)),
+        );
         #[cfg(feature = "inspector")]
         app.register_type::<Velocity>();
     }
