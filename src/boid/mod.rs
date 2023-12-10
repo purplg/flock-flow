@@ -132,7 +132,7 @@ struct BoidBundle {
 }
 
 impl BoidBundle {
-    pub(self) fn new(position: Vec2, velocity: Vec2) -> Self {
+    pub(self) fn new(position: Vec3, velocity: Vec2) -> Self {
         BoidBundle {
             boid: Boid,
             tracked: Tracked,
@@ -140,7 +140,7 @@ impl BoidBundle {
             coherence: Coherence::default(),
             separation: Separation::default(),
             alignment: Alignment::default(),
-            transform: Transform::from_xyz(position.x, position.y, 0.0),
+            transform: Transform::from_translation(position),
         }
     }
 }

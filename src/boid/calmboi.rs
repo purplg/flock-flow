@@ -47,7 +47,10 @@ fn spawn(
                     x: 16. * rng.gen::<f32>() - 8.,
                     y: 16. * rng.gen::<f32>() - 8.,
                 };
-                entity.insert(BoidBundle::new(event.position + offset, event.velocity));
+                entity.insert(BoidBundle::new(
+                    (event.position + offset).extend(1.0),
+                    event.velocity,
+                ));
             }
         }
     }

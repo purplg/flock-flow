@@ -55,7 +55,7 @@ fn startup(
     let pos = Vec3::new(
         rng.gen::<f32>() * 1000. - 500.,
         rng.gen::<f32>() * 600. - 300.,
-        1.0,
+        10.0,
     );
     let mut entity = commands.spawn_empty();
     entity.insert(Name::new("player"));

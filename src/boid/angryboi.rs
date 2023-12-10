@@ -31,7 +31,7 @@ fn spawn(mut commands: Commands, images: Res<Images>, mut events: EventReader<su
                     texture: images.angryboi.clone(),
                     ..default()
                 });
-                entity.insert(BoidBundle::new(event.position, event.velocity));
+                entity.insert(BoidBundle::new(event.position.extend(2.0), event.velocity));
             }
         }
     }
