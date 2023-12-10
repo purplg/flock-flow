@@ -59,6 +59,7 @@ fn spawn(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn collect(
     mut commands: Commands,
     quadtree: Res<KDTree2<Tracked>>,

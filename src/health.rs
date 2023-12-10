@@ -45,10 +45,11 @@ pub fn damages<Attacker: Component + Default, Target: Component + Default, const
 ) {
     for trans in attacker.iter() {
         let pos = trans.translation.xy();
+        #[allow(clippy::cast_precision_loss)]
         for entity in quadtree
             .within_distance(pos, DISTANCE as f32)
             .into_iter()
-            .filter_map(|(_pos, entity)| entity.map(|entity| entity))
+            .filter_map(|(_pos, entity)| entity)
         {
             let Ok(mut health) = target.get_mut(entity) else {
                 continue;
