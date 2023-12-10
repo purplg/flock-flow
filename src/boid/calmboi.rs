@@ -42,7 +42,7 @@ fn spawn(
 
                 entity.insert(Name::new("CalmBoi"));
                 entity.insert(CalmBoi);
-                let home: Home<Collectible> = Home::new(2.0);
+                let home: Home<Collectible> = Home::new(3.0);
                 entity.insert(home);
                 entity.insert(SpriteBundle {
                     texture: images.calmboi.clone(),
