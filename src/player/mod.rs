@@ -11,6 +11,7 @@ use crate::{
     assets::Images,
     boid::{Alignment, BoidSettings},
     collectible::{self, Collectible},
+    health::{self, Health},
     input::InputEvent,
     points::PointEvent,
     rng::RngSource,
@@ -41,6 +42,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(PreUpdate, input.run_if(on_event::<InputEvent>()));
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
+        app.add_systems(Update, die.run_if(on_event::<health::Event>()));
         app.add_plugins(offscreen_marker::Plugin);
 
         #[cfg(feature = "inspector")]
@@ -75,6 +77,7 @@ fn startup(
         turn_speed: 1.5,
     });
     entity.insert(Tracked);
+    entity.insert(Health(1));
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
     entity.insert(Boost::new(2.5));
@@ -256,6 +259,26 @@ fn collect(
                     position: transform.translation.xy(),
                     velocity: velocity.0,
                 });
+            }
+        }
+    }
+}
+
+fn die(
+    mut commands: Commands,
+    player: Query<Entity, With<Player>>,
+    mut events: EventReader<health::Event>,
+) {
+    for event in events.read() {
+        match event {
+            health::Event::Die(entity) => {
+                let Ok(player) = player.get(*entity) else {
+                    continue;
+                };
+
+                if &player == entity {
+                    commands.entity(player).despawn();
+                }
             }
         }
     }

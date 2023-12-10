@@ -6,6 +6,7 @@ mod assets;
 mod boid;
 mod camera;
 mod collectible;
+mod health;
 mod input;
 mod player;
 mod points;
@@ -25,6 +26,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(assets::Plugin);
         app.add_plugins(input::InputPlugin);
         app.add_plugins(track::TrackPlugin);
+        app.add_plugins(health::Plugin);
         app.add_plugins(player::PlayerPlugin);
         app.add_plugins(points::PointsPlugin);
         app.add_plugins(rng::RngPlugin);

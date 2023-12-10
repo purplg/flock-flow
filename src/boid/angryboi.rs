@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
-use crate::assets::Images;
+use crate::{assets::Images, health::damages};
 
 use crate::player::Player;
 
 use super::{BoidBundle, Home};
 
-#[derive(Component)]
+#[derive(Component, Default)]
 struct AngryBoi;
 
 pub(super) struct Plugin;
@@ -15,6 +15,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, spawn.run_if(on_event::<super::SpawnEvent>()));
         app.add_systems(Update, super::home::<Player>);
+        app.add_systems(Update, damages::<AngryBoi, Player, 16>);
     }
 }
 
