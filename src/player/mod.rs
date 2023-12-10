@@ -177,7 +177,6 @@ fn input(
                 player.angvel += dir * player.turn_speed * 2.;
                 player.angvel = player.angvel.clamp(-player.turn_speed, player.turn_speed);
             }
-            InputEvent::Schwack(_) | InputEvent::NextWave => {}
         }
     }
 }
