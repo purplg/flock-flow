@@ -127,7 +127,7 @@ struct BoidBundle {
     velocity: Velocity,
     coherence: Coherence,
     separation: Separation,
-    alignemtn: Alignment,
+    alignment: Alignment,
     transform: Transform,
 }
 
@@ -139,7 +139,7 @@ impl BoidBundle {
             velocity: Velocity(velocity),
             coherence: Coherence::default(),
             separation: Separation::default(),
-            alignemtn: Alignment::default(),
+            alignment: Alignment::default(),
             transform: Transform::from_xyz(position.x, position.y, 0.0),
         }
     }
