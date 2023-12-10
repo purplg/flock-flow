@@ -269,6 +269,7 @@ fn hide_menu(mut commands: Commands, ui: Query<Entity, With<MenuText>>) {
     commands.entity(menu).despawn_recursive();
 }
 
+#[allow(clippy::type_complexity)]
 fn try_again_button(
     mut button: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<GameState>>,
@@ -280,7 +281,7 @@ fn try_again_button(
     match interaction {
         Interaction::Pressed => {
             background.0 = Color::rgb(0.0, 0.0, 0.44);
-            state.set(GameState::Playing)
+            state.set(GameState::Playing);
         }
         Interaction::Hovered => {
             background.0 = Color::rgb(0.2, 0.2, 0.44);

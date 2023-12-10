@@ -130,7 +130,7 @@ fn waves(mut events: EventReader<GameEvent>, mut boid_events: EventWriter<boid::
 fn pause(mut input: EventReader<input::InputEvent>, mut state: ResMut<NextState<GameState>>) {
     for input in input.read() {
         if let input::InputEvent::Pause = input {
-            state.set(GameState::Paused)
+            state.set(GameState::Paused);
         }
     }
 }
@@ -138,7 +138,7 @@ fn pause(mut input: EventReader<input::InputEvent>, mut state: ResMut<NextState<
 fn resume(mut input: EventReader<input::InputEvent>, mut state: ResMut<NextState<GameState>>) {
     for input in input.read() {
         if let input::InputEvent::Pause = input {
-            state.set(GameState::Playing)
+            state.set(GameState::Playing);
         }
     }
 }
