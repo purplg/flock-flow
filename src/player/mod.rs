@@ -2,13 +2,13 @@ mod offscreen_marker;
 
 use std::{f32::consts::PI, time::Duration};
 
-use bevy::prelude::*;
+use bevy::{audio::PlaybackMode, prelude::*};
 use bevy_spatial::{kdtree::KDTree2, SpatialAccess};
 use interpolation::{Ease, Lerp};
-use rand::Rng;
+use rand::{seq::IteratorRandom, Rng};
 
 use crate::{
-    assets::Images,
+    assets::{Images, Sounds},
     boid::{Alignment, BoidSettings},
     collectible::{self, Collectible},
     health::{self, Health},
@@ -43,6 +43,8 @@ impl Plugin for PlayerPlugin {
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
         app.add_systems(Update, die.run_if(on_event::<health::Event>()));
+        app.add_systems(Update, engine_audio);
+        app.add_systems(OnEnter(crate::GameState::GameOver), gameover);
         app.add_plugins(offscreen_marker::Plugin);
 
         #[cfg(feature = "inspector")]
@@ -54,6 +56,7 @@ fn startup(
     mut commands: Commands,
     settings: Res<BoidSettings>,
     images: Res<Images>,
+    sounds: Res<Sounds>,
     mut rng: ResMut<RngSource>,
 ) {
     let pos = Vec3::new(
@@ -85,6 +88,13 @@ fn startup(
     entity.insert(TransformBundle {
         local: Transform::from_translation(pos),
         ..default()
+    });
+    entity.insert(AudioBundle {
+        source: sounds.player_engine.clone(),
+        settings: PlaybackSettings {
+            mode: PlaybackMode::Loop,
+            ..default()
+        },
     });
 }
 
@@ -124,10 +134,14 @@ fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn input(
+    mut commands: Commands,
     mut player: Query<(&mut Player, &Transform, &mut Boost, &Brake)>,
     mut input: EventReader<InputEvent>,
     mut shockwave_events: EventWriter<shockwave::Event>,
+    mut rng: ResMut<RngSource>,
+    sounds: Res<Sounds>,
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
@@ -146,6 +160,13 @@ fn input(
                         radius: 100.,
                         duration: Duration::from_secs_f32(0.5),
                         color: Color::YELLOW,
+                    });
+                    commands.spawn(AudioBundle {
+                        source: sounds.boost.iter().choose(&mut **rng).unwrap().clone(),
+                        settings: PlaybackSettings {
+                            mode: PlaybackMode::Remove,
+                            ..default()
+                        },
                     });
                 }
             }
@@ -274,30 +295,57 @@ fn collect(
 }
 
 fn die(
-    mut commands: Commands,
-    player: Query<(Entity, &Transform), With<Player>>,
+    player: Query<Entity, With<Player>>,
     mut events: EventReader<health::Event>,
     mut gamestate: ResMut<NextState<crate::GameState>>,
-    mut shockwave_events: EventWriter<shockwave::Event>,
 ) {
     for event in events.read() {
-        match event {
-            health::Event::Die(entity) => {
-                let Ok((player, transform)) = player.get(*entity) else {
-                    continue;
-                };
+        let health::Event::Die(entity) = event;
 
-                if &player == entity {
-                    commands.entity(player).despawn();
-                    gamestate.set(crate::GameState::GameOver);
-                    shockwave_events.send(shockwave::Event::Spawn {
-                        position: transform.translation.xy(),
-                        radius: 1000.,
-                        duration: Duration::from_secs_f32(1.0),
-                        color: Color::RED,
-                    });
-                }
-            }
+        let Ok(player) = player.get(*entity) else {
+            continue;
+        };
+
+        if &player == entity {
+            gamestate.set(crate::GameState::GameOver);
         }
     }
+}
+
+fn gameover(
+    mut commands: Commands,
+    sounds: Res<Sounds>,
+    player: Query<(Entity, &Transform), With<Player>>,
+    mut shockwave_events: EventWriter<shockwave::Event>,
+    mut rng: ResMut<RngSource>,
+) {
+    let Ok((entity, transform)) = player.get_single() else {
+        return;
+    };
+
+    commands.entity(entity).despawn();
+
+    shockwave_events.send(shockwave::Event::Spawn {
+        position: transform.translation.xy(),
+        radius: 1000.,
+        duration: Duration::from_secs_f32(1.0),
+        color: Color::RED,
+    });
+    commands.spawn(AudioBundle {
+        source: sounds.gameover.iter().choose(&mut **rng).unwrap().clone(),
+        settings: PlaybackSettings {
+            mode: PlaybackMode::Remove,
+            ..default()
+        },
+    });
+}
+
+fn engine_audio(
+    settings: Res<BoidSettings>,
+    player: Query<(&AudioSink, &Velocity, &Boost), With<Player>>,
+) {
+    let Ok((playback, vel, boost)) = player.get_single() else {
+        return;
+    };
+    playback.set_speed(vel.0.length() / (settings.max_speed * boost.multiplier - 0.5) * 2.);
 }

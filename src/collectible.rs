@@ -1,9 +1,14 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
-use rand::Rng;
+use bevy::{audio::PlaybackMode, prelude::*};
+use rand::{seq::IteratorRandom, Rng};
 
-use crate::{assets::Images, rng::RngSource, shockwave, track::Tracked};
+use crate::{
+    assets::{Images, Sounds},
+    rng::RngSource,
+    shockwave,
+    track::Tracked,
+};
 
 pub struct Plugin;
 
@@ -34,6 +39,7 @@ fn setup(mut writer: EventWriter<Event>) {
 fn events(
     mut commands: Commands,
     images: Res<Images>,
+    sounds: Res<Sounds>,
     mut rng: ResMut<RngSource>,
     mut reader: EventReader<Event>,
     mut shockwave_events: EventWriter<shockwave::Event>,
@@ -80,6 +86,13 @@ fn events(
                         radius: 100.,
                         duration: Duration::from_secs_f32(1.),
                         color: Color::GRAY,
+                    });
+                    commands.spawn(AudioBundle {
+                        source: sounds.collect.iter().choose(&mut **rng).unwrap().clone(),
+                        settings: PlaybackSettings {
+                            mode: PlaybackMode::Remove,
+                            ..default()
+                        },
                     });
                 }
             }

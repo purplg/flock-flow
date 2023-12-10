@@ -56,15 +56,22 @@ enum GameState {
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Flock Flow".to_string(),
-            canvas: Some("#bevy".into()),
-            fit_canvas_to_parent: true,
-            ..default()
-        }),
-        ..default()
-    }));
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Flock Flow".to_string(),
+                    canvas: Some("#bevy".into()),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(AssetPlugin {
+                mode: AssetMode::Unprocessed,
+                ..default()
+            }),
+    );
     app.add_plugins(CorePlugin);
 
     #[cfg(feature = "inspector")]
