@@ -166,8 +166,9 @@ fn avoid(
             .into_iter()
             .filter_map(|(pos, entity)| entity.map(|entity| (pos, entity)))
         {
+            let force = shockwave.active_radius - (boid_pos - shock_pos).length();
             if let Ok(mut vel) = boids.get_mut(boid_entity) {
-                vel.0 -= (shock_pos - boid_pos).normalize_or_zero() * 100.0;
+                vel.0 -= (shock_pos - boid_pos).normalize_or_zero() * force;
             }
         }
     }
