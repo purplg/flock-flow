@@ -101,6 +101,7 @@ fn collect(
                 color: Color::BLUE,
                 repel: false,
             });
+            return;
         }
     }
 }
