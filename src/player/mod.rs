@@ -36,7 +36,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(Update, movement);
         app.add_systems(Update, collect);
         app.add_systems(Update, boost_cooldown);
-        app.add_systems(Update, speed.run_if(on_event::<InputEvent>()));
+        app.add_systems(Update, input.run_if(on_event::<InputEvent>()));
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
         app.add_plugins(offscreen_marker::Plugin);
@@ -73,7 +73,7 @@ fn startup(
     entity.insert(Tracked);
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
-    entity.insert(Boost::new(3.0));
+    entity.insert(Boost::new(2.5));
     entity.insert(TransformBundle {
         local: Transform::from_translation(pos),
         ..default()
@@ -104,7 +104,7 @@ fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
     }
 }
 
-fn speed(
+fn input(
     mut player: Query<(&mut Player, &Transform, &mut Boost)>,
     mut input: EventReader<InputEvent>,
     mut shockwave_events: EventWriter<shockwave::Event>,
@@ -129,24 +129,20 @@ fn speed(
                 }
             }
             InputEvent::SlowDown => {
-                player.target_speed = settings.max_speed * 0.5;
+                player.target_speed -= time.delta_seconds() * 2000.0;
             }
             InputEvent::Turn(_) | InputEvent::Schwack(_) | InputEvent::NextWave => {}
         }
     }
-
-    player.target_speed = player
-        .target_speed
-        .lerp(&settings.max_speed, &time.delta_seconds());
 }
 
 fn movement(
     settings: Res<BoidSettings>,
     mut input: EventReader<InputEvent>,
-    mut player: Query<(&Player, &mut Velocity, &mut Transform, &Boost)>,
+    mut player: Query<(&mut Player, &mut Velocity, &mut Transform, &Boost)>,
     time: Res<Time>,
 ) {
-    let Ok((player, mut vel, mut transform, boost)) = player.get_single_mut() else {
+    let Ok((mut player, mut vel, mut transform, boost)) = player.get_single_mut() else {
         return;
     };
 
@@ -157,6 +153,7 @@ fn movement(
         }
     }
 
+    // Bounds
     let radians = vel.0.y.atan2(vel.0.x);
     let pos = transform.translation.xy();
     let mut angle = radians + turn * time.delta_seconds() * 5.0;
@@ -165,17 +162,31 @@ fn movement(
         angle -= pos.angle_between(up) * time.delta_seconds() * 3.;
     }
 
+    // Translation
     vel.0 = Vec2::from_angle(angle) * vel.0.length();
-    let speed = vel.0.normalize_or_zero() * player.target_speed;
-    vel.0 = vel.0.lerp(speed, time.delta_seconds() * 10.0);
+    let target_speed = vel.0.normalize_or_zero() * player.target_speed;
+    vel.0 = vel.0.lerp(target_speed, time.delta_seconds() * 10.0);
     transform.translation += vel.extend(0.0) * time.delta_seconds();
 
+    // Rotation
     transform.rotation = Quat::from_axis_angle(Vec3::Z, vel.0.y.atan2(vel.0.x) + PI * 1.5);
 
-    let ratio = speed.length() / (settings.max_speed * boost.multiplier - 0.5);
+    // Scale
+    let ratio = vel.0.length() / (settings.max_speed * boost.multiplier - 0.5);
     transform.scale = (MIN_SCALE)
         .lerp(MAX_SCALE, ratio.quadratic_out())
         .extend(0.0);
+
+    // Friction
+    player.target_speed = player
+        .target_speed
+        .lerp(&settings.max_speed, &(time.delta_seconds() * 0.1));
+
+    // Clamp
+    player.target_speed = player.target_speed.clamp(
+        settings.max_speed * 0.5,
+        settings.max_speed * boost.multiplier,
+    );
 }
 
 #[allow(clippy::type_complexity)]
