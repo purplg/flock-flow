@@ -75,11 +75,11 @@ fn collect(
 ) {
     for (boid_entity, trans, vel) in boid.iter() {
         let pos = trans.translation.xy();
-        for (position, entity) in quadtree
+        if let Some((position, entity)) = quadtree
             .within_distance(pos, 32.0)
             .into_iter()
             .filter_map(|(_pos, entity)| entity.map(|entity| (pos, entity)))
-            .filter(|(_pos, entity)| collectibles.contains(*entity))
+            .find(|(_pos, entity)| collectibles.contains(*entity))
         {
             collectible_event.send(collectible::Event::Collect(entity));
             game_events.send(GameEvent::NextWave {
