@@ -31,6 +31,7 @@ impl Plugin for BoidPlugin {
             home_range: 300.,
             home_effect: 2.,
         });
+        app.add_systems(OnExit(crate::GameState::GameOver), reset);
         app.add_systems(
             Update,
             (
@@ -351,5 +352,11 @@ fn gizmo(
                 Color::rgba(0.0, 0.0, 1.0, 0.1),
             );
         }
+    }
+}
+
+fn reset(mut commands: Commands, boids: Query<Entity, With<Boid>>) {
+    for entity in boids.iter() {
+        commands.entity(entity).despawn();
     }
 }

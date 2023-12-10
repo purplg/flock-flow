@@ -36,6 +36,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, startup);
+        app.add_systems(OnExit(crate::GameState::GameOver), startup);
         app.add_systems(Update, movement.run_if(in_state(crate::GameState::Playing)));
         app.add_systems(OnEnter(crate::GameState::Paused), pause);
         app.add_systems(OnExit(crate::GameState::Paused), unpause);
