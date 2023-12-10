@@ -246,7 +246,7 @@ fn fast_removes_alignment(
         return;
     };
 
-    if vel.length_squared() > (settings.max_speed * settings.max_speed) * 2.0 {
+    if vel.length_squared() > (settings.max_speed * settings.max_speed) * 4.0 {
         commands.entity(entity).remove::<Alignment>();
     }
 }
@@ -261,7 +261,7 @@ fn slow_adds_alignment(
         return;
     };
 
-    if vel.length_squared() < (settings.max_speed * settings.max_speed) * 2.0 {
+    if vel.length_squared() < (settings.max_speed * settings.max_speed) * 4.0 {
         commands.entity(entity).insert(Alignment::default());
     }
 }
