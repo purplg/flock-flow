@@ -6,7 +6,7 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            update.run_if(in_state(crate::GameState::Playing)),
+            update.run_if(not(in_state(crate::GameState::Paused))),
         );
         #[cfg(feature = "inspector")]
         app.register_type::<Velocity>();
