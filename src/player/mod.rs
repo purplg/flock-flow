@@ -198,14 +198,13 @@ fn movement(
     player.target_linvel = player
         .target_linvel
         .lerp(&settings.max_speed, &(time.delta_seconds() * 0.5));
+    player.angvel = 0.0;
 
     // Clamp
     player.target_linvel = player.target_linvel.clamp(
         settings.max_speed * 0.5,
         settings.max_speed * boost.multiplier,
     );
-
-    player.angvel = 0.0;
 }
 
 #[allow(clippy::type_complexity)]
