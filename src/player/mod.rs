@@ -245,20 +245,29 @@ fn collect(
     mut point_event: EventWriter<PointEvent>,
     mut collectible_event: EventWriter<collectible::Event>,
     mut game_events: EventWriter<GameEvent>,
+    mut shockwave_events: EventWriter<shockwave::Event>,
 ) {
     for (transform, velocity) in player.iter() {
         let pos = transform.translation.xy();
-        for entity in quadtree
+        for (collectible_position, entity) in quadtree
             .within_distance(pos, 32.0)
             .into_iter()
-            .filter_map(|(_, entity)| entity)
+            .filter_map(|(pos, entity)| entity.map(|entity| (pos, entity)))
         {
             if let Ok((entity, collectible)) = collectibles.get(entity) {
                 point_event.send(PointEvent::Add(collectible.value));
                 collectible_event.send(collectible::Event::Collect(entity));
+
                 game_events.send(GameEvent::NextWave {
                     position: transform.translation.xy(),
                     velocity: velocity.0,
+                });
+
+                shockwave_events.send(shockwave::Event::Spawn {
+                    position: collectible_position,
+                    radius: 100.,
+                    duration: Duration::from_secs_f32(1.),
+                    color: Color::GREEN,
                 });
             }
         }

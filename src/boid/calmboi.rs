@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_spatial::kdtree::KDTree2;
 use bevy_spatial::SpatialAccess;
@@ -6,6 +8,7 @@ use rand::Rng;
 use crate::assets::Images;
 use crate::collectible::{self, Collectible};
 
+use crate::shockwave;
 use crate::{rng::RngSource, track::Tracked, GameEvent};
 
 use super::{BoidBundle, BoidKind, Home, Velocity};
@@ -64,6 +67,7 @@ fn collect(
     mut collectible_event: EventWriter<collectible::Event>,
     mut game_events: EventWriter<GameEvent>,
     mut boi_events: EventWriter<super::SpawnEvent>,
+    mut shockwave_events: EventWriter<shockwave::Event>,
 ) {
     for (boid_entity, trans, vel) in boid.iter() {
         let pos = trans.translation.xy();
@@ -84,6 +88,13 @@ fn collect(
                 count: 1,
                 position: trans.translation.xy(),
                 velocity: vel.0,
+            });
+
+            shockwave_events.send(shockwave::Event::Spawn {
+                position,
+                radius: 100.,
+                duration: Duration::from_secs_f32(1.),
+                color: Color::BLUE,
             });
         }
     }

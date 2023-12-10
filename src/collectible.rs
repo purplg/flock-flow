@@ -77,9 +77,9 @@ fn events(
 
                     shockwave_events.send(shockwave::Event::Spawn {
                         position: trans.translation.xy(),
-                        radius: 200.,
+                        radius: 100.,
                         duration: Duration::from_secs_f32(1.),
-                        color: Color::GREEN,
+                        color: Color::GRAY,
                     });
                 }
             }
