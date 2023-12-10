@@ -40,7 +40,7 @@ fn input(
                 radius: 100.,
                 duration: Duration::from_secs(1),
             }),
-            InputEvent::SlowDown | InputEvent::Boost | InputEvent::Turn(_) => {}
+            InputEvent::Brake | InputEvent::Boost | InputEvent::Turn(_) => {}
         }
     }
 }

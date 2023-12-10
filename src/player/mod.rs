@@ -25,7 +25,9 @@ const MAX_SCALE: Vec2 = Vec2::new(1.0, 1.0);
 
 #[derive(Component, Default)]
 pub struct Player {
-    target_speed: f32,
+    target_linvel: f32,
+    angvel: f32,
+    turn_speed: f32,
 }
 
 pub struct PlayerPlugin;
@@ -36,7 +38,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(Update, movement);
         app.add_systems(Update, collect);
         app.add_systems(Update, boost_cooldown);
-        app.add_systems(Update, input.run_if(on_event::<InputEvent>()));
+        app.add_systems(PreUpdate, input.run_if(on_event::<InputEvent>()));
         app.add_systems(Update, fast_removes_alignment);
         app.add_systems(Update, slow_adds_alignment);
         app.add_plugins(offscreen_marker::Plugin);
@@ -68,12 +70,15 @@ fn startup(
         ..default()
     });
     entity.insert(Player {
-        target_speed: settings.max_speed,
+        target_linvel: settings.max_speed,
+        angvel: 0.0,
+        turn_speed: 1.5,
     });
     entity.insert(Tracked);
     entity.insert(Velocity(-pos.xy().normalize_or_zero()));
     entity.insert(Alignment::default());
     entity.insert(Boost::new(2.5));
+    entity.insert(Brake::new(2000.));
     entity.insert(TransformBundle {
         local: Transform::from_translation(pos),
         ..default()
@@ -96,6 +101,18 @@ impl Boost {
     }
 }
 
+#[derive(Component)]
+#[cfg_attr(feature = "inspector", derive(Reflect))]
+struct Brake {
+    power: f32,
+}
+
+impl Brake {
+    pub fn new(multiplier: f32) -> Self {
+        Self { power: multiplier }
+    }
+}
+
 fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
     for mut boost in &mut boost {
         if boost.cooldown > 0.0 {
@@ -105,13 +122,13 @@ fn boost_cooldown(mut boost: Query<&mut Boost>, time: Res<Time>) {
 }
 
 fn input(
-    mut player: Query<(&mut Player, &Transform, &mut Boost)>,
+    mut player: Query<(&mut Player, &Transform, &mut Boost, &Brake)>,
     mut input: EventReader<InputEvent>,
     mut shockwave_events: EventWriter<shockwave::Event>,
     settings: Res<BoidSettings>,
     time: Res<Time>,
 ) {
-    let Ok((mut player, transform, mut boost)) = player.get_single_mut() else {
+    let Ok((mut player, transform, mut boost, brake)) = player.get_single_mut() else {
         return;
     };
 
@@ -120,7 +137,7 @@ fn input(
             InputEvent::Boost => {
                 if boost.cooldown <= 0.0 {
                     boost.cooldown = 1.0;
-                    player.target_speed = settings.max_speed * boost.multiplier;
+                    player.target_linvel = settings.max_speed * boost.multiplier;
                     shockwave_events.send(shockwave::Event::Spawn {
                         position: transform.translation.xy(),
                         radius: 100.,
@@ -128,17 +145,20 @@ fn input(
                     });
                 }
             }
-            InputEvent::SlowDown => {
-                player.target_speed -= time.delta_seconds() * 2000.0;
+            InputEvent::Brake => {
+                player.target_linvel -= time.delta_seconds() * brake.power;
             }
-            InputEvent::Turn(_) | InputEvent::Schwack(_) | InputEvent::NextWave => {}
+            InputEvent::Turn(dir) => {
+                player.angvel += dir * player.turn_speed * 2.;
+                player.angvel = player.angvel.clamp(-player.turn_speed, player.turn_speed);
+            }
+            InputEvent::Schwack(_) | InputEvent::NextWave => {}
         }
     }
 }
 
 fn movement(
     settings: Res<BoidSettings>,
-    mut input: EventReader<InputEvent>,
     mut player: Query<(&mut Player, &mut Velocity, &mut Transform, &Boost)>,
     time: Res<Time>,
 ) {
@@ -146,17 +166,10 @@ fn movement(
         return;
     };
 
-    let mut turn = 0.0;
-    for event in input.read() {
-        if let InputEvent::Turn(angvel) = event {
-            turn += angvel;
-        }
-    }
-
     // Bounds
     let radians = vel.0.y.atan2(vel.0.x);
     let pos = transform.translation.xy();
-    let mut angle = radians + turn * time.delta_seconds() * 5.0;
+    let mut angle = radians + player.angvel * time.delta_seconds() * 5.0;
     if !settings.bounds.contains(pos) {
         let up = -transform.up().xy();
         angle -= pos.angle_between(up) * time.delta_seconds() * 3.;
@@ -164,7 +177,7 @@ fn movement(
 
     // Translation
     vel.0 = Vec2::from_angle(angle) * vel.0.length();
-    let target_speed = vel.0.normalize_or_zero() * player.target_speed;
+    let target_speed = vel.0.normalize_or_zero() * player.target_linvel;
     vel.0 = vel.0.lerp(target_speed, time.delta_seconds() * 10.0);
     transform.translation += vel.extend(0.0) * time.delta_seconds();
 
@@ -178,15 +191,17 @@ fn movement(
         .extend(0.0);
 
     // Friction
-    player.target_speed = player
-        .target_speed
-        .lerp(&settings.max_speed, &(time.delta_seconds() * 0.1));
+    player.target_linvel = player
+        .target_linvel
+        .lerp(&settings.max_speed, &(time.delta_seconds() * 0.5));
 
     // Clamp
-    player.target_speed = player.target_speed.clamp(
+    player.target_linvel = player.target_linvel.clamp(
         settings.max_speed * 0.5,
         settings.max_speed * boost.multiplier,
     );
+
+    player.angvel = 0.0;
 }
 
 #[allow(clippy::type_complexity)]

@@ -6,7 +6,7 @@ pub struct InputPlugin;
 
 #[derive(Debug, Event)]
 pub enum InputEvent {
-    SlowDown,
+    Brake,
     Turn(f32),
     Schwack(Vec2),
     NextWave,
@@ -52,7 +52,7 @@ fn keyboard(keys: Res<Input<KeyCode>>, mut event_writer: EventWriter<InputEvent>
         event_writer.send(InputEvent::NextWave);
     }
     if keys.pressed(KeyCode::S) {
-        event_writer.send(InputEvent::SlowDown);
+        event_writer.send(InputEvent::Brake);
     }
 
     if keys.pressed(KeyCode::D) {
