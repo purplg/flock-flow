@@ -67,7 +67,7 @@ fn setup(mut commands: Commands) {
         entity.insert(Text2dBundle {
             text: Text::from_sections([
                 TextSection::new(
-                    "Entities: ",
+                    "Boids: ",
                     TextStyle {
                         font_size: 24.0,
                         ..default()
