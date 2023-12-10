@@ -80,7 +80,6 @@ fn spawn(
                 entity.insert(TransformBundle::from_transform(
                     Transform::from_translation(center.extend(0.0)),
                 ));
-                entity.insert(InheritedVisibility::VISIBLE);
                 if *repel {
                     entity.insert(Repel);
                 }
