@@ -23,6 +23,7 @@ struct CorePlugin;
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<GameEvent>();
+        app.add_state::<GameState>();
         app.add_plugins(assets::Plugin);
         app.add_plugins(input::InputPlugin);
         app.add_plugins(track::TrackPlugin);
@@ -44,6 +45,13 @@ impl Plugin for CorePlugin {
 #[derive(Debug, Event)]
 pub enum GameEvent {
     NextWave { position: Vec2, velocity: Vec2 },
+}
+
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum GameState {
+    #[default]
+    Playing,
+    GameOver,
 }
 
 fn main() {

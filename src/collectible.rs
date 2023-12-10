@@ -79,6 +79,7 @@ fn events(
                         position: trans.translation.xy(),
                         radius: 200.,
                         duration: Duration::from_secs_f32(1.),
+                        color: Color::GREEN,
                     });
                 }
             }

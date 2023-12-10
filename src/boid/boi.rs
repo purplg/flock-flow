@@ -39,6 +39,7 @@ fn input(
                 position: *schwack_pos,
                 radius: 100.,
                 duration: Duration::from_secs(1),
+                color: Color::WHITE,
             }),
             InputEvent::Brake | InputEvent::Boost | InputEvent::Turn(_) => {}
         }

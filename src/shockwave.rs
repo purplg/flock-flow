@@ -25,6 +25,7 @@ pub enum Event {
         position: Vec2,
         radius: f32,
         duration: Duration,
+        color: Color,
     },
 }
 
@@ -65,6 +66,7 @@ fn spawn(
                 position: center,
                 radius,
                 duration,
+                color,
             } => {
                 assert!(radius > &0.0);
                 let mut entity = commands.spawn_empty();
@@ -94,6 +96,10 @@ fn spawn(
                             scale,
                         });
                         smoke.insert(SpriteBundle {
+                            sprite: Sprite {
+                                color: *color,
+                                ..default()
+                            },
                             texture: images.smoke.clone(),
                             transform: Transform {
                                 scale: Vec3::ONE * scale,

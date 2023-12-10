@@ -145,6 +145,7 @@ fn input(
                         position: transform.translation.xy(),
                         radius: 100.,
                         duration: Duration::from_secs_f32(0.5),
+                        color: Color::YELLOW,
                     });
                 }
             }
@@ -266,18 +267,27 @@ fn collect(
 
 fn die(
     mut commands: Commands,
-    player: Query<Entity, With<Player>>,
+    player: Query<(Entity, &Transform), With<Player>>,
     mut events: EventReader<health::Event>,
+    mut gamestate: ResMut<NextState<crate::GameState>>,
+    mut shockwave_events: EventWriter<shockwave::Event>,
 ) {
     for event in events.read() {
         match event {
             health::Event::Die(entity) => {
-                let Ok(player) = player.get(*entity) else {
+                let Ok((player, transform)) = player.get(*entity) else {
                     continue;
                 };
 
                 if &player == entity {
                     commands.entity(player).despawn();
+                    gamestate.set(crate::GameState::GameOver);
+                    shockwave_events.send(shockwave::Event::Spawn {
+                        position: transform.translation.xy(),
+                        radius: 1000.,
+                        duration: Duration::from_secs_f32(1.0),
+                        color: Color::RED,
+                    });
                 }
             }
         }

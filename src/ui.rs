@@ -12,6 +12,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Startup, setup);
         app.add_systems(Update, update_points.run_if(resource_changed::<Points>()));
         app.add_systems(Update, update_entity_count.run_if(on_event::<SpawnEvent>()));
+        app.add_systems(OnEnter(crate::GameState::GameOver), gameover);
     }
 }
 
@@ -19,16 +20,16 @@ impl bevy::prelude::Plugin for Plugin {
 struct UI;
 
 fn setup(mut commands: Commands) {
-    let mut entity = commands.spawn_empty();
-    entity.insert(Name::new("HotBar"));
-    entity.insert(UI);
-    entity
+    let mut points = commands.spawn_empty();
+    points.insert(Name::new("Points"));
+    points.insert(UI);
+    points
         .insert(NodeBundle {
             // border_color: BorderColor(Color::RED),
             style: Style {
                 // border: UiRect::px(1.0, 1.0, 1.0, 1.0),
                 display: Display::Flex,
-                flex_direction: FlexDirection::Row,
+                flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
@@ -61,8 +62,9 @@ fn setup(mut commands: Commands) {
                 .insert(PointText);
         });
 
-    let mut entity = commands.spawn_empty();
-    entity.with_children(|parent| {
+    let mut boids = commands.spawn_empty();
+    boids.insert(Name::new("Boid Count"));
+    boids.with_children(|parent| {
         let mut entity = parent.spawn_empty();
         entity.insert(Text2dBundle {
             text: Text::from_sections([
@@ -118,4 +120,28 @@ fn update_entity_count(
             BoidKind::AngryBoi => {}
         }
     }
+}
+
+#[derive(Component)]
+struct GameOverNode;
+
+fn gameover(mut commands: Commands, ui: Query<Entity, With<UI>>) {
+    let Ok(ui) = ui.get_single() else {
+        return;
+    };
+
+    commands.entity(ui).with_children(|parent| {
+        parent
+            .spawn(
+                TextBundle::from_section(
+                    "GameOver",
+                    TextStyle {
+                        font_size: 36.0,
+                        ..default()
+                    },
+                )
+                .with_text_alignment(TextAlignment::Center),
+            )
+            .insert(GameOverNode);
+    });
 }
