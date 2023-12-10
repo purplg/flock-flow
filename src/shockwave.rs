@@ -26,8 +26,12 @@ pub enum Event {
         radius: f32,
         duration: Duration,
         color: Color,
+        repel: bool,
     },
 }
+
+#[derive(Component)]
+struct Repel;
 
 #[derive(Component)]
 struct Smoke {
@@ -67,6 +71,7 @@ fn spawn(
                 radius,
                 duration,
                 color,
+                repel,
             } => {
                 assert!(radius > &0.0);
                 let mut entity = commands.spawn_empty();
@@ -76,6 +81,9 @@ fn spawn(
                     Transform::from_translation(center.extend(0.0)),
                 ));
                 entity.insert(InheritedVisibility::VISIBLE);
+                if *repel {
+                    entity.insert(Repel);
+                }
 
                 entity.with_children(|parent| {
                     let density = radius.floor();
@@ -150,7 +158,7 @@ fn smoke(
 fn avoid(
     quadtree: Res<KDTree2<Tracked>>,
     mut boids: Query<&mut Velocity, Without<Player>>,
-    shockwaves: Query<(&Transform, &Shockwave)>,
+    shockwaves: Query<(&Transform, &Shockwave), With<Repel>>,
 ) {
     for (shockwave_trans, shockwave) in shockwaves.iter() {
         let shock_pos = shockwave_trans.translation.xy();

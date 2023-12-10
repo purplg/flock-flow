@@ -169,6 +169,7 @@ fn input(
                         radius: 100.,
                         duration: Duration::from_secs_f32(0.5),
                         color: Color::YELLOW,
+                        repel: true,
                     });
                     commands.spawn(AudioBundle {
                         source: sounds.boost.iter().choose(&mut **rng).unwrap().clone(),
@@ -296,6 +297,7 @@ fn collect(
                     radius: 100.,
                     duration: Duration::from_secs_f32(1.),
                     color: Color::GREEN,
+                    repel: false,
                 });
             }
         }
@@ -338,6 +340,7 @@ fn gameover(
         radius: 1000.,
         duration: Duration::from_secs_f32(1.0),
         color: Color::RED,
+        repel: true,
     });
     commands.spawn(AudioBundle {
         source: sounds.gameover.iter().choose(&mut **rng).unwrap().clone(),

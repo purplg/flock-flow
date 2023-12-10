@@ -99,6 +99,7 @@ fn collect(
                 radius: 100.,
                 duration: Duration::from_secs_f32(1.),
                 color: Color::BLUE,
+                repel: false,
             });
         }
     }

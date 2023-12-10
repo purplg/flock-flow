@@ -86,6 +86,7 @@ fn events(
                         radius: 100.,
                         duration: Duration::from_secs_f32(1.),
                         color: Color::GRAY,
+                        repel: true,
                     });
                     commands.spawn(AudioBundle {
                         source: sounds.collect.iter().choose(&mut **rng).unwrap().clone(),
