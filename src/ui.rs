@@ -292,10 +292,17 @@ fn try_again_button(
     }
 }
 
-fn reset(mut commands: Commands, ui: Query<Entity, With<GameOverNode>>) {
-    let Ok(menu) = ui.get_single() else {
-        return;
-    };
+fn reset(
+    mut commands: Commands,
+    ui: Query<Entity, With<GameOverNode>>,
+    mut count: Query<(&mut Text, &mut EntityCount)>,
+) {
+    if let Ok(menu) = ui.get_single() {
+        commands.entity(menu).despawn_recursive();
+    }
 
-    commands.entity(menu).despawn_recursive();
+    if let Ok((mut text, mut count)) = count.get_single_mut() {
+        count.0 = 0;
+        text.sections[1].value = format!("{}", count.0);
+    }
 }
