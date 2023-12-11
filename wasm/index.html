@@ -1,7 +1,11 @@
 <!doctype html>
 <html lang="en">
-
-<body style="margin: 0px">
+<head>
+  <style>
+    html, body {margin:0;height:100%;}
+  </style>
+</head>
+<body>
   <script type="module">
     import './restart-audio-context.js'
     import init from './bevy_game.js'
@@ -12,10 +16,6 @@
       }
     });
   </script>
-
-  <div style="width: 640px; height: 360px">
-    <canvas id="bevy">
-  </div>
 </body>
 
 </html>

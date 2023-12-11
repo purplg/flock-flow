@@ -70,7 +70,6 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Flock Flow".to_string(),
-                    canvas: Some("#bevy".into()),
                     fit_canvas_to_parent: true,
                     ..default()
                 }),
